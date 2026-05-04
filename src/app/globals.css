@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink: #0b1220;
+  --color-ink-soft: #1f2937;
+  --color-muted: #475569;
+  --color-muted-soft: #64748b;
+  --color-line: #e5e7eb;
+  --color-line-soft: #f1f5f9;
+  --color-canvas: #ffffff;
+  --color-canvas-tint: #f8fafc;
+  --color-canvas-deep: #0b1220;
+
+  --color-brand: #0f3a8a;
+  --color-brand-dark: #0a285f;
+  --color-brand-light: #1d4ed8;
+  --color-accent: #ea580c;
+  --color-accent-dark: #c2410c;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 14px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Use :where() so utility classes (text-white etc.) and parent inheritance always win.
+   Without :where() the element selector beats Tailwind utilities on specificity, which
+   was leaving white-on-dark headings invisible (hero h1, dark-section h2s). */
+:where(h1, h2, h3, h4, h5) {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: #fff;
+}
+
+/* Utility — eyebrow label used across hero/section headings */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* Subtle hairline dividers used between dark sections */
+.hairline {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  height: 1px;
+  width: 100%;
+}
+
+/* Generic focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-light);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip-to-content link, hidden until focused */
+.skip-link {
+  position: absolute;
+  left: -10000px;
+  top: 1rem;
+  background: var(--color-ink);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 1rem;
 }
