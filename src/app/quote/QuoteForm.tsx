@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { SITE } from "@/lib/site";
 import { useQuoteCart } from "@/components/QuoteCart";
+import { submitQuote, type QuoteSubmitInput } from "./actions";
 
 const INTERESTS = [
   "Evergreen Rental Program",
@@ -15,10 +16,15 @@ const INTERESTS = [
   "Consumables",
 ];
 
+type FieldErrors = Record<string, string>;
+
 export function QuoteForm() {
   const { items, count, setQuantity, remove, clear } = useQuoteCart();
   const [submitted, setSubmitted] = useState(false);
   const [prefillNote, setPrefillNote] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [isPending, startTransition] = useTransition();
 
   // Legacy ?item= deep link support — surface it as a note since cart is the new flow.
   useEffect(() => {
@@ -30,65 +36,69 @@ export function QuoteForm() {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setErrorMessage(null);
+    setFieldErrors({});
     const fd = new FormData(e.currentTarget);
-    const data: Record<string, string | string[]> = {};
-    for (const [k, v] of fd.entries()) {
-      if (data[k]) {
-        data[k] = ([] as string[]).concat(data[k] as string).concat(String(v));
+
+    const interests = fd.getAll("interests").map((v) => String(v));
+    const sourceUrl = typeof window !== "undefined" ? window.location.href : "";
+
+    const payload: QuoteSubmitInput = {
+      orderedBy: String(fd.get("orderedBy") ?? "").trim(),
+      email: String(fd.get("email") ?? "").trim(),
+      phone: String(fd.get("phone") ?? "").trim(),
+      company: String(fd.get("company") ?? "").trim(),
+      dateNeeded: String(fd.get("dateNeeded") ?? "").trim(),
+      duration: String(fd.get("duration") ?? "").trim(),
+      erpp: String(fd.get("erpp") ?? "").trim(),
+      poOrCc: String(fd.get("poOrCc") ?? "").trim(),
+      shippingAccount: String(fd.get("shippingAccount") ?? "").trim(),
+      shipping: String(fd.get("shipping") ?? "").trim(),
+      instructions: String(fd.get("instructions") ?? "").trim(),
+      interests,
+      cart: items.map((it) => ({
+        productSlug: it.productSlug,
+        categorySlug: it.categorySlug,
+        productName: it.productName,
+        productImage: it.productImage,
+        quantity: it.quantity,
+        kind: it.kind,
+      })),
+      // Phase 4 sets this when Turnstile is wired up. Until then it's empty
+      // and the server-side verifier fails open.
+      turnstileToken: "",
+      sourceUrl,
+    };
+
+    startTransition(async () => {
+      const result = await submitQuote(payload);
+      if (result.ok) {
+        setSubmitted(true);
+        clear();
       } else {
-        data[k] = String(v);
+        setErrorMessage(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
       }
-    }
-
-    // Build the items list from the cart, grouped by kind.
-    const rentals = items.filter((i) => (i.kind ?? "rental") === "rental");
-    const calibrations = items.filter((i) => (i.kind ?? "rental") === "calibration");
-
-    const lines: string[] = [];
-    if (rentals.length) {
-      lines.push("EQUIPMENT RENTALS");
-      rentals.forEach((i, idx) => lines.push(`  ${idx + 1}. ${i.productName} × ${i.quantity}`));
-      lines.push("");
-    }
-    if (calibrations.length) {
-      lines.push("CALIBRATION SERVICES");
-      calibrations.forEach((i, idx) => lines.push(`  ${idx + 1}. ${i.productName} × ${i.quantity}`));
-      lines.push("");
-    }
-    if (items.length === 0) {
-      lines.push("EQUIPMENT REQUESTED");
-      lines.push("  (no items in cart — see notes below)");
-      lines.push("");
-    }
-    lines.push("REQUEST DETAILS");
-    for (const [k, v] of Object.entries(data)) {
-      const value = Array.isArray(v) ? v.join(", ") : v;
-      if (value && value.trim()) lines.push(`  ${k}: ${value}`);
-    }
-
-    const subject = items.length
-      ? `Quote request — ${items.length} item${items.length === 1 ? "" : "s"} (${data.orderedBy || "new inquiry"})`
-      : `Quote request — ${data.orderedBy || "new inquiry"}`;
-    const body = `New quote request from bndtrentals.com:\n\n${lines.join("\n")}`;
-    const mailto = `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
-    setSubmitted(true);
+    });
   }
 
   if (submitted) {
     return (
-      <div className="rounded-2xl border border-line bg-canvas-tint p-10 text-center">
+      <div
+        role="status"
+        className="rounded-2xl border border-line bg-canvas-tint p-10 text-center"
+      >
         <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-brand text-white">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <h2 className="mt-5 text-2xl font-bold">Thanks — your email client just opened.</h2>
+        <h2 className="mt-5 text-2xl font-bold">Thanks — we got your request.</h2>
         <p className="mt-3 text-[16px] text-muted">
-          Send the prepared message to <span className="font-semibold text-ink">{SITE.email}</span> and
-          we&apos;ll come back with availability shortly. If your client didn&apos;t open, call{" "}
+          A team member will follow up at your email or phone within the
+          business hour. If you need it faster, call{" "}
           <a href={`tel:${SITE.primaryPhoneTel}`} className="font-semibold text-brand hover:text-brand-dark">
             {SITE.primaryPhone}
-          </a>{" "}
-          instead.
+          </a>
+          .
         </p>
       </div>
     );
@@ -265,17 +275,37 @@ export function QuoteForm() {
         </div>
       </Section>
 
+      {errorMessage && (
+        <div
+          role="alert"
+          className="rounded-xl border border-accent/40 bg-accent/5 p-4 text-[14.5px] text-ink"
+        >
+          <p className="font-semibold text-accent">{errorMessage}</p>
+          {Object.keys(fieldErrors).length > 0 && (
+            <ul className="mt-2 list-disc pl-5 text-[13.5px] text-muted">
+              {Object.entries(fieldErrors).map(([field, msg]) => (
+                <li key={field}>
+                  <strong className="text-ink">{field}:</strong> {msg}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[13px] text-muted-soft">
-          Submitting opens your email client with the form pre-filled. We&apos;ll reply within the
-          business hour.
+          We&apos;ll reply within the business hour. By submitting you agree to
+          be contacted at the email or phone you provided.
         </p>
         <button
           type="submit"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-4 text-base font-bold text-white hover:bg-accent-dark"
+          disabled={isPending}
+          {...(isPending ? { "aria-disabled": "true" as const } : {})}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-4 text-base font-bold text-white hover:bg-accent-dark disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Send quote request
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          {isPending ? "Sending…" : "Send quote request"}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
       </div>
     </form>
@@ -331,7 +361,7 @@ function Field({ label, name, type = "text", required, placeholder, textarea, de
         <textarea
           name={name}
           required={required}
-          aria-required={required || undefined}
+          {...(required ? { "aria-required": "true" as const } : {})}
           placeholder={placeholder}
           rows={3}
           defaultValue={defaultValue as string | undefined}
@@ -342,7 +372,7 @@ function Field({ label, name, type = "text", required, placeholder, textarea, de
           name={name}
           type={type}
           required={required}
-          aria-required={required || undefined}
+          {...(required ? { "aria-required": "true" as const } : {})}
           placeholder={placeholder}
           defaultValue={defaultValue}
           min={min}
