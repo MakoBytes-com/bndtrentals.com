@@ -3,6 +3,7 @@ import { SITE } from "@/lib/site";
 import { CATEGORIES, allProducts } from "@/lib/equipment";
 import { APPLICATIONS } from "@/lib/applications";
 import { PROJECTS } from "@/lib/projects";
+import { LOCATION_CONTENT } from "@/lib/location-content";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = SITE.url;
@@ -13,12 +14,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/applications`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/projects`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/calibration`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/locations`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/quote`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
     { url: `${base}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
+  const locationRoutes: MetadataRoute.Sitemap = Object.keys(LOCATION_CONTENT).map((slug) => ({
+    url: `${base}/locations/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
   const equipmentRoutes: MetadataRoute.Sitemap = CATEGORIES.map((c) => ({
     url: `${base}/equipment/${c.slug}`,
     lastModified: now,
@@ -43,5 +51,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "monthly",
     priority: 0.6,
   }));
-  return [...staticRoutes, ...equipmentRoutes, ...productRoutes, ...appRoutes, ...projectRoutes];
+  return [...staticRoutes, ...locationRoutes, ...equipmentRoutes, ...productRoutes, ...appRoutes, ...projectRoutes];
 }
