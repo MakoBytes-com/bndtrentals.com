@@ -99,3 +99,31 @@ a {
 .skip-link:focus {
   left: 1rem;
 }
+
+/* Screen-reader-only utility for adding context to links/buttons without
+   visual noise. Used for "(opens in new tab)" and "(PDF)" hints. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Respect motion-reduction preferences. Only transitions/animations are
+   suppressed; layout-impacting properties (transform on collapse) keep their
+   end state but skip the animated path. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

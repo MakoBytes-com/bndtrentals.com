@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuoteCart } from "./QuoteCart";
 
 export function CartDrawer() {
   const { items, count, isOpen, close, setQuantity, remove, clear, flash } = useQuoteCart();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<Element | null>(null);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -14,6 +16,29 @@ export function CartDrawer() {
     document.documentElement.style.overflow = isOpen ? "hidden" : "";
     return () => { document.documentElement.style.overflow = ""; };
   }, [isOpen]);
+
+  // Escape to close + initial focus on close button + focus restore on close
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement;
+    closeButtonRef.current?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      // restore focus to the element that was focused before drawer opened
+      const prev = previousFocusRef.current;
+      if (prev instanceof HTMLElement) prev.focus();
+    };
+  }, [isOpen, close]);
 
   return (
     <>
@@ -43,18 +68,20 @@ export function CartDrawer() {
       <aside
         className={`fixed right-0 top-0 z-[56] flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         role="dialog"
-        aria-label="Quote cart"
+        aria-modal="true"
+        aria-labelledby="cart-drawer-heading"
         aria-hidden={!isOpen ? "true" : "false"}
       >
         <header className="flex items-center justify-between border-b border-line px-6 py-5">
           <div>
             <p className="text-[12px] font-bold uppercase tracking-widest text-accent">Quote Builder</p>
-            <h2 className="mt-0.5 text-xl font-bold">Your selected items</h2>
+            <h2 id="cart-drawer-heading" className="mt-0.5 text-xl font-bold">Your selected items</h2>
           </div>
           <button
             type="button"
             onClick={close}
-            className="inline-flex size-9 items-center justify-center rounded-lg border border-line text-ink hover:bg-canvas-tint"
+            ref={closeButtonRef}
+            className="inline-flex size-11 items-center justify-center rounded-lg border border-line text-ink hover:bg-canvas-tint"
             aria-label="Close cart"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

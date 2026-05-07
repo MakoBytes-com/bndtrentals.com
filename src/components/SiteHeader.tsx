@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Container } from "./Container";
 import { NAV_PRIMARY, NAV_EQUIPMENT, SITE } from "@/lib/site";
 import { cn } from "@/lib/cn";
@@ -11,6 +11,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const eqWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -23,6 +24,24 @@ export function SiteHeader() {
     document.documentElement.style.overflow = open ? "hidden" : "";
     return () => { document.documentElement.style.overflow = ""; };
   }, [open]);
+
+  // Equipment dropdown: close on Escape, close on click outside.
+  useEffect(() => {
+    if (!eqOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setEqOpen(false);
+    }
+    function onPointerDown(e: PointerEvent) {
+      const wrap = eqWrapRef.current;
+      if (wrap && !wrap.contains(e.target as Node)) setEqOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [eqOpen]);
 
   return (
     <header className="sticky top-0 z-40">
@@ -75,31 +94,70 @@ export function SiteHeader() {
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-8" aria-label="Primary">
             <div
+              ref={eqWrapRef}
               className="relative"
               onMouseEnter={() => setEqOpen(true)}
               onMouseLeave={() => setEqOpen(false)}
             >
-              <Link
-                href="/equipment"
-                className="flex items-center gap-1.5 text-[15px] font-semibold text-ink hover:text-brand transition-colors"
-              >
-                Equipment
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              </Link>
+              {/*
+                Two-element pattern: a Link to /equipment for direct navigation,
+                plus a separate disclosure button for the submenu. This keeps
+                the link target clickable while exposing keyboard / aria-expanded
+                semantics for the dropdown.
+              */}
+              <div className="flex items-center">
+                <Link
+                  href="/equipment"
+                  className="text-[15px] font-semibold text-ink hover:text-brand transition-colors"
+                >
+                  Equipment
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setEqOpen((v) => !v)}
+                  aria-expanded={eqOpen ? "true" : "false"}
+                  aria-controls="equipment-submenu"
+                  aria-label={eqOpen ? "Close equipment categories" : "Open equipment categories"}
+                  className="ml-1 inline-flex size-6 items-center justify-center rounded text-ink hover:text-brand"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={cn("transition-transform", eqOpen && "rotate-180")}
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
               {eqOpen && (
-                <div className="absolute left-1/2 top-full -translate-x-1/2 pt-3 w-[260px]">
-                  <div className="rounded-xl border border-line bg-white p-2 shadow-lg shadow-ink/10">
+                <div
+                  id="equipment-submenu"
+                  className="absolute left-1/2 top-full -translate-x-1/2 pt-3 w-[260px]"
+                >
+                  {/* Simple disclosure pattern — not a true ARIA menu (no arrow-key
+                      navigation), so we don't claim role="menu". Standard links
+                      work fine for keyboard users via Tab. */}
+                  <ul className="rounded-xl border border-line bg-white p-2 shadow-lg shadow-ink/10">
                     {NAV_EQUIPMENT.map((it) => (
-                      <Link
-                        key={it.href}
-                        href={it.href}
-                        className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[14px] font-medium text-ink-soft hover:bg-canvas-tint hover:text-brand"
-                      >
-                        <span>{it.label}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                      </Link>
+                      <li key={it.href}>
+                        <Link
+                          href={it.href}
+                          onClick={() => setEqOpen(false)}
+                          className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[14px] font-medium text-ink-soft hover:bg-canvas-tint hover:text-brand"
+                        >
+                          <span>{it.label}</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </Link>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
             </div>

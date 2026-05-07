@@ -68,7 +68,7 @@ export default function CalibrationPage() {
             <a
               href="/pdfs/Burton-NDT-Rentals-Calibration-Price-List.pdf"
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-[14.5px] font-bold text-white hover:bg-accent-dark"
             >
               Download PDF (281 KB)

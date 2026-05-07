@@ -87,7 +87,7 @@ export default function TermsPage() {
             <a
               href="/pdfs/Terms-and-Conditions.pdf"
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 text-[14px] font-bold text-white hover:bg-accent-dark"
             >
               Download PDF

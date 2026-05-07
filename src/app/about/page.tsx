@@ -144,7 +144,7 @@ export default function AboutPage() {
                   <a
                     href={`/pdfs/${a.file}`}
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     className="flex items-start gap-4 rounded-xl border border-line bg-canvas-tint p-4 hover:border-brand hover:bg-white"
                   >
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">

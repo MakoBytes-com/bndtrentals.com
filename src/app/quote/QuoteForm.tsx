@@ -320,12 +320,18 @@ function Field({ label, name, type = "text", required, placeholder, textarea, de
     <label className="block">
       <span className="block text-[13px] font-semibold text-ink">
         {label}
-        {required && <span className="ml-1 text-accent">*</span>}
+        {required && (
+          <>
+            <span aria-hidden="true" className="ml-1 text-accent">*</span>
+            <span className="sr-only"> (required)</span>
+          </>
+        )}
       </span>
       {textarea ? (
         <textarea
           name={name}
           required={required}
+          aria-required={required || undefined}
           placeholder={placeholder}
           rows={3}
           defaultValue={defaultValue as string | undefined}
@@ -336,6 +342,7 @@ function Field({ label, name, type = "text", required, placeholder, textarea, de
           name={name}
           type={type}
           required={required}
+          aria-required={required || undefined}
           placeholder={placeholder}
           defaultValue={defaultValue}
           min={min}
