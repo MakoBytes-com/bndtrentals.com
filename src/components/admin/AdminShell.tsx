@@ -1,0 +1,172 @@
+import Link from "next/link";
+import { type ReactNode } from "react";
+import { SITE } from "@/lib/site";
+import { AdminLogoutButton } from "./AdminLogoutButton";
+
+type AdminSessionLike = {
+  fullName?: string;
+  email?: string;
+  role?: "admin" | "staff";
+};
+
+const NAV: Array<{
+  href: string;
+  label: string;
+  icon: ReactNode;
+}> = [
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/leads",
+    label: "Quote leads",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 4h16v12H5.17L4 17.17V4z" />
+        <line x1="8" y1="9" x2="16" y2="9" />
+        <line x1="8" y1="13" x2="13" y2="13" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/catalog",
+    label: "Catalog",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/calibration",
+    label: "Calibration recalls",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/content",
+    label: "Site content",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+    ),
+  },
+];
+
+const ACCOUNT: Array<{ href: string; label: string }> = [
+  { href: "/admin/account/change-password", label: "Change password" },
+];
+
+export function AdminShell({
+  session,
+  children,
+}: {
+  session: AdminSessionLike;
+  children: ReactNode;
+}) {
+  const initials = (session.fullName ?? session.email ?? "?")
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div className="min-h-screen bg-canvas-tint text-ink">
+      <div className="flex min-h-screen">
+        {/* Sidebar */}
+        <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-line bg-[#0b1220] text-white">
+          <div className="px-5 py-6 border-b border-white/10">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">
+              Admin
+            </p>
+            <p className="mt-1 text-[15px] font-bold">{SITE.shortName}</p>
+            <p className="mt-0.5 text-[12px] text-white/60">bndtrentals.com</p>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto py-4" aria-label="Admin">
+            <p className="px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
+              Burton work
+            </p>
+            <ul className="mt-2 space-y-1 px-2">
+              {NAV.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-white/80 hover:bg-white/5 hover:text-white"
+                  >
+                    <span className="text-white/50">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-6 px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
+              Account
+            </p>
+            <ul className="mt-2 space-y-1 px-2">
+              {ACCOUNT.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] text-white/70 hover:bg-white/5 hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="border-t border-white/10 p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-[13px] font-bold">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-white">
+                  {session.fullName ?? "Admin"}
+                </p>
+                <p className="truncate text-[11.5px] text-white/55">
+                  {session.email}
+                </p>
+              </div>
+            </div>
+            <AdminLogoutButton />
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="flex-1 min-w-0">
+          {/* Mobile top bar */}
+          <div className="lg:hidden border-b border-line bg-white px-5 py-3 flex items-center justify-between">
+            <p className="text-[14px] font-bold">{SITE.shortName} admin</p>
+            <AdminLogoutButton compact />
+          </div>
+
+          <div className="px-5 lg:px-10 py-8 lg:py-12 max-w-6xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
