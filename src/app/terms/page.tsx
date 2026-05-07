@@ -19,6 +19,11 @@ const SECTIONS = [
       "All equipment is rented in calibrated, working condition. Calibration certificates are issued at time of shipment unless waived in writing by the customer. Customer assumes responsibility for the equipment from the moment it is signed for at the receiving address until it is returned to a Burton NDT Rentals hub.",
   },
   {
+    title: "1a. How these terms apply",
+    body:
+      "Every rental and sale is accompanied by the signed Burton NDT Rentals Terms & Conditions PDF (downloadable above). Returning a signed copy with your first order — or accepting equipment shipped under a Burton quote that references these terms — constitutes acceptance. The signed PDF is the binding version; the summary below is for quick reference and may be updated.",
+  },
+  {
     title: "2. Equipment Rental Protection Plan (ERPP)",
     body:
       "Customers may add the optional Equipment Rental Protection Plan (ERPP) at 15% of the rental rate. ERPP covers normal field damage but does not cover loss, theft, willful misuse, abuse, exposure to incompatible chemicals, or damage caused by failure to follow operating instructions.",

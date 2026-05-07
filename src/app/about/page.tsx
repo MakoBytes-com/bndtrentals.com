@@ -51,7 +51,7 @@ export default function AboutPage() {
       <PageHero
         eyebrow="Who we are"
         title="Industrial inspection equipment, run by people who've done the field work."
-        description={`Founded in 2019 by Mark Burton, Burton NDT Rentals brings ${SITE.yearsInBusiness}+ years of inspection-industry experience to every rental, sale, calibration, and repair we ship.`}
+        description={`Burton NDT Rentals — a trusted brand since ${SITE.brandSince}, operated as Burton NDT LLC since ${SITE.llcFounded} by founder Mark Burton. ${SITE.yearsInBusiness}+ years of inspection-industry experience behind every rental, sale, calibration, and repair we ship.`}
       />
 
       {/* STORY */}
