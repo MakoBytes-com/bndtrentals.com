@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
-import { SITE } from "@/lib/site";
+import { headers } from "next/headers";
+import { SITE, LOCATIONS } from "@/lib/site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { QuoteCartProvider } from "@/components/QuoteCart";
@@ -62,6 +63,8 @@ export const metadata: Metadata = {
   },
 };
 
+const hq = LOCATIONS.find((l) => l.isHq) ?? LOCATIONS[0];
+
 const orgSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
@@ -71,21 +74,39 @@ const orgSchema = {
   telephone: SITE.primaryPhone,
   email: SITE.email,
   description: SITE.description,
+  foundingDate: `${SITE.llcFounded}`,
   areaServed: "United States",
   address: {
     "@type": "PostalAddress",
-    streetAddress: "832 S. Broadway St.",
-    addressLocality: "La Porte",
-    addressRegion: "TX",
-    postalCode: "77571",
+    streetAddress: hq.street,
+    addressLocality: hq.city,
+    addressRegion: hq.state,
+    postalCode: hq.zip,
     addressCountry: "US",
   },
+  // All 3 service locations as additional `location` entries so multi-location
+  // queries surface every hub.
+  location: LOCATIONS.map((l) => ({
+    "@type": "Place",
+    name: `${SITE.shortName} — ${l.region}`,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: l.street,
+      addressLocality: l.city,
+      addressRegion: l.state,
+      postalCode: l.zip,
+      addressCountry: "US",
+    },
+    telephone: l.phone,
+  })),
   sameAs: ["https://www.linkedin.com/company/burton-ndt-rentals/"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="en"
@@ -104,6 +125,7 @@ export default function RootLayout({
         </QuoteCartProvider>
         <script
           type="application/ld+json"
+          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
         />
       </body>

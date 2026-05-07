@@ -1,16 +1,25 @@
+const DEFAULT_SITE_URL = "https://bndt-showcase.vercel.app";
+
+function resolveSiteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!raw) return DEFAULT_SITE_URL;
+  return raw.replace(/\/+$/, "");
+}
+
 export const SITE = {
   name: "Burton NDT Rentals",
   shortName: "Burton NDT",
-  url: "https://bndt-showcase.vercel.app",
+  url: resolveSiteUrl(),
   description:
-    "Industrial inspection equipment rental, sales, calibration & repair. 35+ years serving NDT, RVI, PMI, X-Ray, and environmental monitoring across the U.S. with offices in La Porte TX, Groves TX, and Marietta GA.",
+    "Industrial inspection equipment rental, sales, calibration & repair. Trusted brand since 1990, operated by Burton NDT LLC since 2020 — serving NDT, RVI, PMI, X-Ray, and environmental monitoring across the U.S. with offices in La Porte TX, Groves TX, and Marietta GA.",
   tagline: "Industrial Inspection Equipment — Rental, Sales, Calibration & Repair",
   yearsInBusiness: 35,
-  founded: 1990,
+  brandSince: 1990,
+  llcFounded: 2020,
   email: "information@bndtrentals.com",
   primaryPhone: "281-941-4311",
   primaryPhoneTel: "+12819414311",
-} as const;
+};
 
 export type Location = {
   city: string;

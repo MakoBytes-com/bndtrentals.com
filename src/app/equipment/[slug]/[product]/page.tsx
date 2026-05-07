@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { Container } from "@/components/Container";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
@@ -50,6 +51,7 @@ export default async function ProductDetail({
   const found = findProduct(slug, product);
   if (!found) notFound();
   const { product: p, subcategory, category } = found;
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   // Related products from same subcategory
   const related = subcategory.products.filter((x) => x.slug !== p.slug).slice(0, 4);
@@ -69,6 +71,27 @@ export default async function ProductDetail({
       availability: "https://schema.org/InStock",
       seller: { "@type": "Organization", name: SITE.name },
     },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE.url },
+      { "@type": "ListItem", position: 2, name: "Equipment", item: `${SITE.url}/equipment` },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: category.short,
+        item: `${SITE.url}/equipment/${category.slug}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 4,
+        name: p.name,
+        item: `${SITE.url}/equipment/${category.slug}/${p.slug}`,
+      },
+    ],
   };
 
   return (
@@ -233,7 +256,13 @@ export default async function ProductDetail({
 
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
     </>
   );
