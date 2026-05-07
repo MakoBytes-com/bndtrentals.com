@@ -22,7 +22,11 @@ export function proxy(request: NextRequest) {
     "img-src 'self' data: https: blob:",
     "media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
     "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com",
-    "connect-src 'self'",
+    // Vercel Analytics + Speed Insights post to /_vercel/insights/* (same
+    // origin, allowed by 'self'). Sentry posts to its own ingest endpoint
+    // only when SENTRY_DSN is set; allowing it here means flipping the env
+    // var requires no further code change.
+    "connect-src 'self' https://*.ingest.sentry.io https://*.sentry.io",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

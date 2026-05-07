@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Inter, Sora } from "next/font/google";
 import { headers } from "next/headers";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE, LOCATIONS } from "@/lib/site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -132,6 +134,8 @@ export default async function RootLayout({
           <CartDrawer />
           <BackToTop />
         </QuoteCartProvider>
+        <Analytics />
+        <SpeedInsights />
         <script
           type="application/ld+json"
           nonce={nonce}
