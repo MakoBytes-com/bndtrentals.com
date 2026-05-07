@@ -3,11 +3,14 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { SITE } from "@/lib/site";
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
-  description: "How Burton NDT Rentals handles your contact information and form submissions.",
-};
+  description:
+    "How Burton NDT Rentals handles your contact information, quote-form submissions, analytics, and error tracking.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

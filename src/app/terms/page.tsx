@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms & Conditions",
-  description: "Terms and conditions for renting and purchasing equipment from Burton NDT Rentals.",
-};
+  description:
+    "Terms and conditions for renting and purchasing equipment from Burton NDT Rentals. Signed PDF is the binding version sent with every rental.",
+  path: "/terms",
+});
 
 const SECTIONS = [
   {

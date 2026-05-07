@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/page-metadata";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { QuoteForm } from "./QuoteForm";
 import { SITE, LOCATIONS } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Request a Quote",
   description:
     "Request a rental quote or reservation for industrial inspection equipment from Burton NDT Rentals. Same-day pricing, calibrated stock.",
-};
+  path: "/quote",
+});
 
 export default function QuotePage() {
   return (

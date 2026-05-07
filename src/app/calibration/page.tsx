@@ -6,16 +6,18 @@ import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
 import { CATEGORIES } from "@/lib/equipment";
 import { SITE } from "@/lib/site";
+import { pageMetadata } from "@/lib/page-metadata";
 
 function calSlug(s: string) {
   return "cal-" + s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Calibration & Repair",
   description:
     "In-house calibration and repair services for NDT, RVI, PMI, and environmental monitoring equipment. Calibration certificates included; recall management on request.",
-};
+  path: "/calibration",
+});
 
 const STEPS = [
   {

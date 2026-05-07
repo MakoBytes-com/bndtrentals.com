@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/page-metadata";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { TEAM } from "@/lib/team";
 import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "About Us",
   description:
-    "Burton NDT Rentals — 35+ years of industrial inspection equipment rental, sales, calibration, and repair. La Porte TX, Groves TX, and Marietta GA.",
-};
+    "Burton NDT Rentals — trusted brand since 1990, operated as Burton NDT LLC since 2020. Industrial inspection equipment rental, sales, calibration, and repair. La Porte TX, Groves TX, and Marietta GA.",
+  path: "/about",
+});
 
 // Verbatim from the original Burton NDT Rentals About page — preserved word-for-word.
 const VALUES = [

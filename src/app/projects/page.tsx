@@ -5,12 +5,14 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { PROJECTS } from "@/lib/projects";
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Equipment in Action",
   description:
     "Watch Burton NDT Rentals equipment deployed in the field — robotic crawlers, ACFM scanners, FOSAR retrieval tools, and more.",
-};
+  path: "/projects",
+});
 
 export default function ProjectsPage() {
   return (

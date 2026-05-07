@@ -5,12 +5,14 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { APP_HUB } from "@/lib/applications";
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Applications",
   description:
     "NDT, RVI, and PMI inspection methods explained — when to use which technique, and what equipment you need.",
-};
+  path: "/applications",
+});
 
 export default function ApplicationsHub() {
   return (

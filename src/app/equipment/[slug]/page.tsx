@@ -7,6 +7,7 @@ import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
 import { CATEGORIES, CATEGORY_BY_SLUG } from "@/lib/equipment";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export function generateStaticParams() {
   return CATEGORIES.map((c) => ({ slug: c.slug }));
@@ -19,11 +20,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const cat = CATEGORY_BY_SLUG[slug];
-  if (!cat) return { title: "Equipment" };
-  return {
-    title: cat.name,
+  if (!cat) return pageMetadata({ title: "Equipment", description: "Browse equipment.", path: "/equipment" });
+  return pageMetadata({
+    title: `${cat.name} Equipment`,
     description: cat.description,
-  };
+    path: `/equipment/${cat.slug}`,
+  });
 }
 
 export default async function EquipmentCategoryPage({

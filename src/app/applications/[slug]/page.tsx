@@ -6,6 +6,7 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { APPLICATIONS } from "@/lib/applications";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export function generateStaticParams() {
   return Object.keys(APPLICATIONS).map((slug) => ({ slug }));
@@ -18,11 +19,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const app = APPLICATIONS[slug];
-  if (!app) return { title: "Applications" };
-  return {
+  if (!app) return pageMetadata({ title: "Applications", description: "Inspection methodologies.", path: "/applications" });
+  return pageMetadata({
     title: app.name,
     description: app.blurb,
-  };
+    path: `/applications/${slug}`,
+  });
 }
 
 export default async function ApplicationDetail({

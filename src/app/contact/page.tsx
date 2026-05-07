@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { LOCATIONS, SITE } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Contact Us",
   description:
     "Reach Burton NDT Rentals — three U.S. service hubs in La Porte TX, Groves TX, and Marietta GA. Call 281-941-4311 or email information@bndtrentals.com.",
-};
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (

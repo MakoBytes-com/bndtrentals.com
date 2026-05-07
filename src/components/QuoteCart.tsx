@@ -38,7 +38,47 @@ type CartContextValue = {
 };
 
 const STORAGE_KEY = "bndt-quote-cart-v1";
+const ERROR_BUFFER_KEY = "bndt-error-buffer-v1";
 const CartContext = createContext<CartContextValue | null>(null);
+
+function isCartItem(value: unknown): value is CartItem {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.productSlug === "string" &&
+    typeof v.categorySlug === "string" &&
+    typeof v.productName === "string" &&
+    typeof v.quantity === "number" &&
+    Number.isFinite(v.quantity) &&
+    v.quantity > 0 &&
+    (v.productImage === undefined || typeof v.productImage === "string") &&
+    (v.kind === undefined || v.kind === "rental" || v.kind === "calibration")
+  );
+}
+
+// Same buffer the error boundaries write to. Phase 2 swaps this for Sentry
+// + portal error_events ingestion; until then we keep the last 25 events
+// in localStorage so we have something to forward when the pipeline lands.
+function bufferClientError(scope: string, err: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(ERROR_BUFFER_KEY);
+    const buf = raw ? (JSON.parse(raw) as unknown[]) : [];
+    buf.push({
+      scope,
+      message: err instanceof Error ? err.message : String(err),
+      name: err instanceof Error ? err.name : undefined,
+      ts: new Date().toISOString(),
+    });
+    window.localStorage.setItem(
+      ERROR_BUFFER_KEY,
+      JSON.stringify(buf.slice(-25)),
+    );
+  } catch {
+    // intentionally swallow — if even the error buffer is unwriteable
+    // there's nothing else we can do client-side at this layer
+  }
+}
 
 export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -47,23 +87,70 @@ export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
   const [flash, setFlash] = useState<string | null>(null);
 
   // Hydrate from localStorage on mount.
+  // Validate shape so a malformed entry doesn't crash the app or smuggle in
+  // unexpected fields. If hydration fails, log the failure and fall back to
+  // an empty cart rather than throwing.
   useEffect(() => {
+    if (typeof window === "undefined") {
+      setHydrated(true);
+      return;
+    }
     try {
-      const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+      const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setItems(parsed);
+        const parsed = JSON.parse(raw) as unknown;
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(isCartItem);
+          if (valid.length !== parsed.length) {
+            // Some entries were malformed; rewrite the storage with the
+            // sanitized list so we don't repeatedly re-validate them.
+            console.warn(
+              `[bndt cart] discarded ${parsed.length - valid.length} malformed item(s) during hydrate`,
+            );
+            try {
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(valid));
+            } catch {
+              // ignore — same handling as the persist effect below
+            }
+          }
+          setItems(valid);
+        }
       }
-    } catch {}
+    } catch (err) {
+      // Corrupted JSON or storage access blocked. Surface to the same buffer
+      // error.tsx writes to so it becomes visible in Phase 2 observability.
+      console.warn("[bndt cart] hydrate failed; starting empty", err);
+      bufferClientError("cart-hydrate", err);
+      // Wipe the bad entry so we don't trip the same parse on every visit.
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+    }
     setHydrated(true);
   }, []);
 
-  // Persist on change.
+  // Persist on change. The interesting failure case is QuotaExceededError —
+  // localStorage is small (~5MB per origin) and a runaway cart could fill it.
+  // If we hit quota, flash a user-visible notice and drop the persistence (the
+  // in-memory cart still works for this session).
   useEffect(() => {
     if (!hydrated) return;
+    if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {}
+    } catch (err) {
+      const isQuota =
+        err instanceof DOMException &&
+        (err.name === "QuotaExceededError" || err.code === 22);
+      if (isQuota) {
+        setFlash("Browser storage full — your cart won't persist. Submit your quote to keep it.");
+      } else {
+        console.warn("[bndt cart] persist failed", err);
+      }
+      bufferClientError(isQuota ? "cart-quota" : "cart-persist", err);
+    }
   }, [items, hydrated]);
 
   // Flash auto-clear.

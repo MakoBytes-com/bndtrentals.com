@@ -8,6 +8,7 @@ import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
 import { CATEGORIES, findProduct } from "@/lib/equipment";
 import { SITE } from "@/lib/site";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export function generateStaticParams() {
   const params: Array<{ slug: string; product: string }> = [];
@@ -28,18 +29,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, product } = await params;
   const found = findProduct(slug, product);
-  if (!found) return { title: "Equipment" };
+  if (!found) return pageMetadata({ title: "Equipment", description: "Browse equipment.", path: "/equipment" });
   const { product: p, category } = found;
   const title = p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name;
-  return {
+  return pageMetadata({
     title,
-    description: p.description ?? `${p.name} — rental, sale, calibration, and repair from ${SITE.name}.`,
-    openGraph: {
-      title,
-      description: p.description ?? `${p.name} — available for rent in the ${category.name} category.`,
-      images: [`/images/${p.image}`],
-    },
-  };
+    description: p.description ?? `${p.name} — available for rent in the ${category.name} category. Rental, sale, calibration, and repair from ${SITE.name}.`,
+    path: `/equipment/${slug}/${product}`,
+    ogImage: `${SITE.url}/images/${p.image}`,
+  });
 }
 
 export default async function ProductDetail({

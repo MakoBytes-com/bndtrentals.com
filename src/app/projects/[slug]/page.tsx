@@ -5,6 +5,7 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { PROJECTS, PROJECT_BY_SLUG } from "@/lib/projects";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export function generateStaticParams() {
   return PROJECTS.map((p) => ({ slug: p.slug }));
@@ -17,8 +18,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const p = PROJECT_BY_SLUG[slug];
-  if (!p) return { title: "Project" };
-  return { title: p.title, description: p.blurb };
+  if (!p) return pageMetadata({ title: "Project", description: "Equipment in action.", path: "/projects" });
+  return pageMetadata({
+    title: p.title,
+    description: p.blurb,
+    path: `/projects/${slug}`,
+  });
 }
 
 export default async function ProjectDetail({

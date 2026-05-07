@@ -5,12 +5,14 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { CATEGORIES, totalProductCount } from "@/lib/equipment";
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Equipment Catalog",
   description:
     "Industrial inspection equipment available for rent, sale, calibration, and repair from Burton NDT Rentals — NDT, RVI, PMI, X-Ray, Environmental, Accessories, and Consumables.",
-};
+  path: "/equipment",
+});
 
 const PILLAR_IMAGES: Record<string, string> = {
   ndt: "ndt-img.jpg",
