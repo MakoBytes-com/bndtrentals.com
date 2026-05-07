@@ -48,13 +48,13 @@ export default function HomePage() {
     <>
       {/* HERO */}
       <section className="relative isolate overflow-hidden bg-canvas-deep text-white">
-        <div
-          className="absolute inset-0 -z-10 opacity-40"
-          style={{
-            backgroundImage: "url(/images/slider-img.jpg)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+        <Image
+          src="/images/slider-img.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="absolute inset-0 -z-10 object-cover opacity-40"
           aria-hidden
         />
         <div

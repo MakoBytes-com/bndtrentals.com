@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Container } from "./Container";
 
 export function PageHero({
@@ -14,13 +15,13 @@ export function PageHero({
   return (
     <section className="relative isolate overflow-hidden bg-canvas-deep text-white">
       {imageUrl && (
-        <div
-          className="absolute inset-0 -z-10 opacity-30"
-          style={{
-            backgroundImage: `url(${imageUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="absolute inset-0 -z-10 object-cover opacity-30"
           aria-hidden
         />
       )}

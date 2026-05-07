@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Inter, Sora } from "next/font/google";
 import { headers } from "next/headers";
 import { SITE, LOCATIONS } from "@/lib/site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { QuoteCartProvider } from "@/components/QuoteCart";
-import { CartDrawer } from "@/components/CartDrawer";
-import { BackToTop } from "@/components/BackToTop";
 import "./globals.css";
+
+// CartDrawer + BackToTop are interactive UI shells that don't need to be in
+// the SSR'd HTML. Defer their JS until after hydration so the initial HTML
+// stays small and First Contentful Paint isn't blocked by their bundles.
+const CartDrawer = dynamic(() =>
+  import("@/components/CartDrawer").then((m) => m.CartDrawer),
+);
+const BackToTop = dynamic(() =>
+  import("@/components/BackToTop").then((m) => m.BackToTop),
+);
 
 const inter = Inter({
   variable: "--font-inter",
