@@ -13,7 +13,11 @@ export function proxy(request: NextRequest) {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    // Turnstile loads its API script from challenges.cloudflare.com. With
+    // 'strict-dynamic', a script vouched for by a nonced script can fetch
+    // additional scripts, but the initial loader URL still needs to be
+    // listed explicitly when next/script doesn't get to nonce it.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
     // 'unsafe-inline' is ignored by browsers when a nonce is present (CSP3) —
     // we keep it ONLY in dev because Next dev injects unhashed inline styles
     // for HMR. Production gets nonce-only.
@@ -21,12 +25,15 @@ export function proxy(request: NextRequest) {
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: https: blob:",
     "media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-    "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com",
+    // Turnstile's challenge UI renders inside an iframe to
+    // challenges.cloudflare.com.
+    "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://challenges.cloudflare.com",
     // Vercel Analytics + Speed Insights post to /_vercel/insights/* (same
     // origin, allowed by 'self'). Sentry posts to its own ingest endpoint
     // only when SENTRY_DSN is set; allowing it here means flipping the env
-    // var requires no further code change.
-    "connect-src 'self' https://*.ingest.sentry.io https://*.sentry.io",
+    // var requires no further code change. Turnstile siteverify happens
+    // server-side, not from the browser.
+    "connect-src 'self' https://*.ingest.sentry.io https://*.sentry.io https://challenges.cloudflare.com",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

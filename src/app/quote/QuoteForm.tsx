@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { SITE } from "@/lib/site";
 import { useQuoteCart } from "@/components/QuoteCart";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { submitQuote, type QuoteSubmitInput } from "./actions";
 
 const INTERESTS = [
@@ -24,6 +25,7 @@ export function QuoteForm() {
   const [prefillNote, setPrefillNote] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
   // Legacy ?item= deep link support — surface it as a note since cart is the new flow.
@@ -64,9 +66,9 @@ export function QuoteForm() {
         quantity: it.quantity,
         kind: it.kind,
       })),
-      // Phase 4 sets this when Turnstile is wired up. Until then it's empty
-      // and the server-side verifier fails open.
-      turnstileToken: "",
+      // Token is empty in dev / when NEXT_PUBLIC_TURNSTILE_SITE_KEY is not
+      // set. Server-side verifier fails open in that case.
+      turnstileToken,
       sourceUrl,
     };
 
@@ -292,6 +294,11 @@ export function QuoteForm() {
           )}
         </div>
       )}
+
+      <TurnstileWidget
+        onToken={(token) => setTurnstileToken(token ?? "")}
+        className="flex justify-end"
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[13px] text-muted-soft">
