@@ -145,6 +145,44 @@ type TableDef<R, I, U> = {
   Relationships: [];
 };
 
+export type CustomerStatus = "active" | "prospect" | "inactive" | "do_not_contact";
+
+export type Customer = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  company: string | null;
+  phone: string | null;
+  shipping_address: string | null;
+  internal_notes: string | null;
+  status: CustomerStatus;
+  source: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  last_contact_at: string | null;
+};
+
+export type PageView = {
+  id: string;
+  path: string;
+  referrer: string | null;
+  user_agent: string | null;
+  session_id: string;
+  ip: string | null;
+  country: string | null;
+  created_at: string;
+};
+
+export type AnalyticsEvent = {
+  id: string;
+  name: string;
+  path: string;
+  session_id: string;
+  data: Record<string, unknown> | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -183,6 +221,21 @@ export type Database = {
         PageSection,
         Partial<PageSection> & Pick<PageSection, "slug" | "title">,
         Partial<PageSection>
+      >;
+      customers: TableDef<
+        Customer,
+        Partial<Customer> & Pick<Customer, "email">,
+        Partial<Customer>
+      >;
+      page_views: TableDef<
+        PageView,
+        Partial<PageView> & Pick<PageView, "path" | "session_id">,
+        Partial<PageView>
+      >;
+      analytics_events: TableDef<
+        AnalyticsEvent,
+        Partial<AnalyticsEvent> & Pick<AnalyticsEvent, "name" | "path" | "session_id">,
+        Partial<AnalyticsEvent>
       >;
     };
     Views: Record<string, never>;

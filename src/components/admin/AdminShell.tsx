@@ -2,6 +2,7 @@ import Link from "next/link";
 import { type ReactNode } from "react";
 import { SITE } from "@/lib/site";
 import { AdminLogoutButton } from "./AdminLogoutButton";
+import { AdminSelfExclude } from "./AdminSelfExclude";
 
 type AdminSessionLike = {
   fullName?: string;
@@ -9,11 +10,9 @@ type AdminSessionLike = {
   role?: "admin" | "staff";
 };
 
-const NAV: Array<{
-  href: string;
-  label: string;
-  icon: ReactNode;
-}> = [
+type NavItem = { href: string; label: string; icon: ReactNode };
+
+const BURTON_NAV: NavItem[] = [
   {
     href: "/admin",
     label: "Dashboard",
@@ -38,6 +37,18 @@ const NAV: Array<{
     ),
   },
   {
+    href: "/admin/customers",
+    label: "Customers",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 11l-3-3-3 3" />
+        <line x1="19" y1="8" x2="19" y2="16" />
+      </svg>
+    ),
+  },
+  {
     href: "/admin/catalog",
     label: "Catalog",
     icon: (
@@ -57,6 +68,9 @@ const NAV: Array<{
       </svg>
     ),
   },
+];
+
+const WEB_NAV: NavItem[] = [
   {
     href: "/admin/content",
     label: "Site content",
@@ -78,23 +92,12 @@ const NAV: Array<{
       </svg>
     ),
   },
-  {
-    href: "/admin/users",
-    label: "Users",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
 ];
 
 const ACCOUNT: Array<{ href: string; label: string }> = [
   { href: "/admin/account/change-password", label: "Change password" },
   { href: "/admin/account/totp-setup", label: "Two-factor (TOTP)" },
+  { href: "/admin/users", label: "Users" },
 ];
 
 export function AdminShell({
@@ -114,6 +117,7 @@ export function AdminShell({
 
   return (
     <div className="min-h-screen bg-canvas-tint text-ink">
+      <AdminSelfExclude />
       <div className="flex min-h-screen">
         {/* Sidebar */}
         <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-line bg-[#0b1220] text-white">
@@ -133,10 +137,27 @@ export function AdminShell({
 
           <nav className="flex-1 overflow-y-auto py-4" aria-label="Admin">
             <p className="px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
-              Burton work
+              Burton sales work
             </p>
             <ul className="mt-2 space-y-1 px-2">
-              {NAV.map((item) => (
+              {BURTON_NAV.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-white/80 hover:bg-white/5 hover:text-white"
+                  >
+                    <span className="text-white/50">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-6 px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
+              Web work
+            </p>
+            <ul className="mt-2 space-y-1 px-2">
+              {WEB_NAV.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}

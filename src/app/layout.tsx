@@ -19,6 +19,9 @@ const CartDrawer = dynamic(() =>
 const BackToTop = dynamic(() =>
   import("@/components/BackToTop").then((m) => m.BackToTop),
 );
+const PageViewTracker = dynamic(
+  () => import("@/components/PageViewTracker"),
+);
 
 const inter = Inter({
   variable: "--font-inter",
@@ -134,6 +137,7 @@ export default async function RootLayout({
           <CartDrawer />
           <BackToTop />
         </QuoteCartProvider>
+        <PageViewTracker />
         <Analytics />
         <SpeedInsights />
         <script

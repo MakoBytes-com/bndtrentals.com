@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { getAnalyticsSnapshot } from "@/lib/analytics/queries";
 import type { QuoteLead } from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
@@ -149,6 +150,15 @@ export default async function AnalyticsPage() {
       .eq("is_published", true),
     supa.from("catalog_categories").select("*", { count: "exact", head: true }),
   ]);
+
+  // In-house web analytics (page_views + analytics_events) over the last
+  // 30 days. Same fleet pattern used on bishopbend / makobot.
+  const traffic = await getAnalyticsSnapshot();
+  const dailyMax = traffic.daily.reduce((m, d) => Math.max(m, d.views), 0) || 1;
+  const refMax =
+    traffic.topReferrers.named[0]?.count ??
+    Math.max(traffic.topReferrers.direct, 1);
+  const pageMax = traffic.topPages[0]?.count ?? 1;
 
   return (
     <div>
@@ -348,32 +358,193 @@ export default async function AnalyticsPage() {
         </div>
       </section>
 
-      {/* Out-link to Vercel */}
-      <section className="mt-10 rounded-2xl border border-line bg-canvas-tint p-6">
+      {/* Web traffic — in-house */}
+      <section className="mt-10">
         <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">
-          Traffic & Core Web Vitals
+          Web traffic — last 30 days
         </h2>
-        <p className="mt-3 text-[14.5px] text-ink-soft">
-          Visitor counts, page views, referrers, top countries, and Core Web
-          Vitals (LCP / INP / CLS) live in Vercel&apos;s dashboard for the
-          bndt-showcase project. They&apos;re measured client-side via{" "}
-          <code className="font-mono">@vercel/analytics</code> and{" "}
-          <code className="font-mono">@vercel/speed-insights</code> — already
-          wired into every page since Phase 0.
+        <p className="mt-2 text-[13px] text-muted-soft">
+          Pulled live from Burton&apos;s own page_views + analytics_events
+          tables. Bots are filtered server-side via the isbot package; admin
+          browsers self-exclude via localStorage. /admin/* paths are dropped
+          from public-traffic numbers.
         </p>
-        <a
-          href="https://vercel.com/mako-studi/bndt-showcase/analytics"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-[14px] font-bold text-white hover:bg-ink-soft"
-        >
-          Open Vercel Analytics
-          <span className="sr-only"> (opens in new tab)</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M7 17L17 7" />
-            <polyline points="7 7 17 7 17 17" />
-          </svg>
-        </a>
+
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Tile label="Page views" value={traffic.totals.views} />
+          <Tile label="Unique sessions" value={traffic.totals.sessions} />
+          <Tile label="Tracked events" value={traffic.totals.events} />
+          <Tile
+            label="Top referrer"
+            value={traffic.topReferrers.named[0]?.count ?? 0}
+            suffix={traffic.topReferrers.named[0]?.source ?? "—"}
+          />
+        </div>
+
+        {!traffic.hasAnyData ? (
+          <div className="mt-6 rounded-2xl border border-line bg-white p-6 text-[14px] text-muted">
+            No traffic captured yet. Visit{" "}
+            <code className="font-mono">bndtrentals.com</code> from a browser
+            that doesn&apos;t have <code className="font-mono">mako_no_track</code>{" "}
+            set — first row should appear within seconds.
+          </div>
+        ) : (
+          <>
+            {/* Daily sparkline */}
+            <div className="mt-6 rounded-2xl border border-line bg-white p-5">
+              <p className="text-[11.5px] font-bold uppercase tracking-widest text-muted">
+                Daily page views
+              </p>
+              <div className="mt-4 flex items-end gap-1 h-32">
+                {traffic.daily.map((d, i) => {
+                  const h = (d.views / dailyMax) * 100;
+                  return (
+                    <div
+                      key={i}
+                      className="flex-1 flex flex-col items-center gap-1 group relative"
+                      title={`${d.date}: ${d.views} views, ${d.sessions} sessions`}
+                    >
+                      <div
+                        className="w-full rounded-t bg-brand/80 group-hover:bg-brand transition-colors"
+                        style={{ height: `${Math.max(h, d.views > 0 ? 4 : 0)}%` }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex justify-between text-[10px] text-muted-soft">
+                <span>{traffic.daily[0]?.date}</span>
+                <span>{traffic.daily[traffic.daily.length - 1]?.date}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              {/* Top pages */}
+              <div className="rounded-2xl border border-line bg-white p-5">
+                <p className="text-[11.5px] font-bold uppercase tracking-widest text-muted">
+                  Top pages
+                </p>
+                {traffic.topPages.length === 0 ? (
+                  <p className="mt-4 text-[13.5px] text-muted">No pageviews yet.</p>
+                ) : (
+                  <ul className="mt-4 space-y-2.5">
+                    {traffic.topPages.map((p) => {
+                      const pct = (p.count / pageMax) * 100;
+                      return (
+                        <li key={p.path} className="text-[13px]">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="truncate font-mono text-[12.5px] text-ink">
+                              {p.path}
+                            </span>
+                            <span className="tabular-nums text-muted shrink-0">
+                              {p.count}
+                            </span>
+                          </div>
+                          <div className="mt-1 h-2 rounded-full bg-canvas-tint overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-brand"
+                              style={{ width: `${Math.max(pct, 2)}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+
+              {/* Top referrers */}
+              <div className="rounded-2xl border border-line bg-white p-5">
+                <p className="text-[11.5px] font-bold uppercase tracking-widest text-muted">
+                  Top referrers
+                </p>
+                {traffic.topReferrers.named.length === 0 &&
+                traffic.topReferrers.direct === 0 ? (
+                  <p className="mt-4 text-[13.5px] text-muted">No referrers tracked yet.</p>
+                ) : (
+                  <ul className="mt-4 space-y-2.5">
+                    {traffic.topReferrers.named.map((r) => {
+                      const pct = (r.count / refMax) * 100;
+                      return (
+                        <li key={r.source} className="text-[13px]">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="truncate font-semibold text-ink">{r.source}</span>
+                            <span className="tabular-nums text-muted shrink-0">{r.count}</span>
+                          </div>
+                          <div className="mt-1 h-2 rounded-full bg-canvas-tint overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-accent"
+                              style={{ width: `${Math.max(pct, 2)}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {traffic.topReferrers.direct > 0 && (
+                      <li className="text-[13px] pt-2 border-t border-line">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-semibold text-muted">Direct / unknown</span>
+                          <span className="tabular-nums text-muted shrink-0">
+                            {traffic.topReferrers.direct}
+                          </span>
+                        </div>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+
+              {/* Top countries */}
+              <div className="rounded-2xl border border-line bg-white p-5">
+                <p className="text-[11.5px] font-bold uppercase tracking-widest text-muted">
+                  Top countries
+                </p>
+                {traffic.topCountries.length === 0 ? (
+                  <p className="mt-4 text-[13.5px] text-muted">
+                    Country data populates in production once Vercel routes through edge.
+                  </p>
+                ) : (
+                  <ul className="mt-4 space-y-2">
+                    {traffic.topCountries.map((c) => (
+                      <li
+                        key={c.code}
+                        className="flex items-center justify-between text-[13.5px]"
+                      >
+                        <span className="font-semibold text-ink">{c.name}</span>
+                        <span className="tabular-nums text-muted">{c.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Top events */}
+              <div className="rounded-2xl border border-line bg-white p-5">
+                <p className="text-[11.5px] font-bold uppercase tracking-widest text-muted">
+                  Top events
+                </p>
+                {traffic.topEvents.length === 0 ? (
+                  <p className="mt-4 text-[13.5px] text-muted">
+                    No tracked events yet. Wire <code className="font-mono">track()</code>{" "}
+                    calls into CTA buttons to see conversions here.
+                  </p>
+                ) : (
+                  <ul className="mt-4 space-y-2">
+                    {traffic.topEvents.map((e) => (
+                      <li
+                        key={e.name}
+                        className="flex items-center justify-between text-[13.5px]"
+                      >
+                        <span className="truncate font-semibold text-ink">{e.name}</span>
+                        <span className="tabular-nums text-muted shrink-0">{e.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
@@ -383,10 +554,12 @@ function Tile({
   label,
   value,
   accent,
+  suffix,
 }: {
   label: string;
   value: number;
   accent?: boolean;
+  suffix?: string;
 }) {
   return (
     <div
@@ -406,6 +579,9 @@ function Tile({
       >
         {value}
       </p>
+      {suffix && (
+        <p className="mt-1 truncate text-[12.5px] text-muted-soft">{suffix}</p>
+      )}
     </div>
   );
 }
