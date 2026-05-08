@@ -200,6 +200,24 @@ export type ErrorEvent = {
   occurred_at: string;
 };
 
+export type CustomerAuditAction = "create" | "update" | "delete";
+
+export type CustomerAuditLog = {
+  id: string;
+  customer_id: string;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  action: CustomerAuditAction;
+  changes: Record<string, unknown> | null;
+  occurred_at: string;
+};
+
+export type RateLimitLog = {
+  id: number;
+  bucket_key: string;
+  occurred_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -260,9 +278,29 @@ export type Database = {
           Pick<ErrorEvent, "level" | "module" | "message" | "fingerprint">,
         Partial<ErrorEvent>
       >;
+      customer_audit_log: TableDef<
+        CustomerAuditLog,
+        Partial<CustomerAuditLog> &
+          Pick<CustomerAuditLog, "customer_id" | "action">,
+        Partial<CustomerAuditLog>
+      >;
+      rate_limit_log: TableDef<
+        RateLimitLog,
+        Partial<RateLimitLog> & Pick<RateLimitLog, "bucket_key">,
+        Partial<RateLimitLog>
+      >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      check_and_record_rate: {
+        Args: {
+          p_bucket_key: string;
+          p_window_ms: number;
+          p_max: number;
+        };
+        Returns: boolean;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

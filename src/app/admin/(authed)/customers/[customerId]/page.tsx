@@ -3,7 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { CustomerEditForm } from "./CustomerEditForm";
-import type { Customer, QuoteLeadStatus, CalibrationRecallStatus } from "@/lib/supabase/types";
+import type {
+  Customer,
+  CustomerAuditLog,
+  QuoteLeadStatus,
+  CalibrationRecallStatus,
+} from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
   title: "Customer detail",
@@ -45,8 +50,8 @@ export default async function CustomerDetailPage({
   if (error || !data) notFound();
   const c = data as Customer;
 
-  // Pull related leads + recalls by email match.
-  const [leadsRes, recallsRes] = await Promise.all([
+  // Pull related leads + recalls by email match + audit history.
+  const [leadsRes, recallsRes, auditRes] = await Promise.all([
     supa
       .from("quote_leads")
       .select("id, status, ordered_by, created_at")
@@ -59,10 +64,17 @@ export default async function CustomerDetailPage({
       .ilike("customer_email", c.email)
       .order("due_date", { ascending: true })
       .limit(50),
+    supa
+      .from("customer_audit_log")
+      .select("*")
+      .eq("customer_id", customerId)
+      .order("occurred_at", { ascending: false })
+      .limit(30),
   ]);
 
   const leads = leadsRes.data ?? [];
   const recalls = recallsRes.data ?? [];
+  const audit = (auditRes.data ?? []) as CustomerAuditLog[];
 
   return (
     <div>
@@ -135,6 +147,68 @@ export default async function CustomerDetailPage({
                     <span className="rounded-full bg-canvas-tint px-2.5 py-0.5 text-[11.5px] font-bold uppercase tracking-wider text-muted ring-1 ring-line">
                       {l.status as QuoteLeadStatus}
                     </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Activity log */}
+          <section className="rounded-2xl border border-line bg-white p-5">
+            <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">
+              Activity ({audit.length})
+            </h2>
+            {audit.length === 0 ? (
+              <p className="mt-3 text-[13.5px] text-muted">
+                No edits recorded yet. New changes will appear here.
+              </p>
+            ) : (
+              <ul className="mt-4 divide-y divide-line">
+                {audit.map((row) => (
+                  <li key={row.id} className="py-3 text-[13.5px]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider ${
+                            row.action === "create"
+                              ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
+                              : row.action === "delete"
+                                ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                : "bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                          }`}
+                        >
+                          {row.action}
+                        </span>
+                        <span className="font-semibold text-ink">
+                          {row.actor_email ?? "system"}
+                        </span>
+                      </span>
+                      <span className="text-[12px] text-muted-soft">
+                        {fmtDate(row.occurred_at)}
+                      </span>
+                    </div>
+                    {row.action === "update" && row.changes && (
+                      <ul className="mt-2 ml-6 space-y-1 text-[12.5px] text-muted">
+                        {Object.entries(
+                          row.changes as Record<string, { from: unknown; to: unknown }>,
+                        ).map(([field, diff]) => (
+                          <li key={field} className="font-mono">
+                            <span className="text-ink">{field}</span>:{" "}
+                            <span className="text-rose-700/80">
+                              {diff?.from === null || diff?.from === undefined
+                                ? "—"
+                                : String(diff.from)}
+                            </span>{" "}
+                            →{" "}
+                            <span className="text-emerald-700/80">
+                              {diff?.to === null || diff?.to === undefined
+                                ? "—"
+                                : String(diff.to)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>

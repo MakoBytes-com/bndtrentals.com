@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getAdminSession } from "@/lib/auth/session";
+import { diffRows, recordCustomerAudit } from "@/lib/audit";
 import type { Customer } from "@/lib/supabase/types";
 
 const createSchema = z.object({
@@ -46,18 +47,19 @@ export async function createCustomer(input: CreateCustomerInput) {
   const data = parsed.data;
 
   const supa = getAdminSupabase();
+  const insertRow = {
+    email: data.email.toLowerCase(),
+    full_name: blank(data.full_name),
+    company: blank(data.company),
+    phone: blank(data.phone),
+    shipping_address: blank(data.shipping_address),
+    internal_notes: blank(data.internal_notes),
+    status: data.status,
+    source: "manual",
+  };
   const { data: row, error } = await supa
     .from("customers")
-    .insert({
-      email: data.email.toLowerCase(),
-      full_name: blank(data.full_name),
-      company: blank(data.company),
-      phone: blank(data.phone),
-      shipping_address: blank(data.shipping_address),
-      internal_notes: blank(data.internal_notes),
-      status: data.status,
-      source: "manual",
-    })
+    .insert(insertRow)
     .select("id")
     .single();
   if (error || !row) {
@@ -69,6 +71,14 @@ export async function createCustomer(input: CreateCustomerInput) {
     }
     return { ok: false as const, error: error?.message ?? "Insert failed." };
   }
+
+  await recordCustomerAudit({
+    customerId: row.id,
+    actorUserId: session.userId,
+    actorEmail: session.email ?? null,
+    action: "create",
+    changes: diffRows(null, insertRow),
+  });
 
   revalidatePath("/admin/customers");
   return { ok: true as const, id: row.id };
@@ -94,6 +104,13 @@ export async function updateCustomer(input: UpdateCustomerInput) {
   const data = parsed.data;
 
   const supa = getAdminSupabase();
+  // Snapshot before so we can record a field-level diff.
+  const { data: before } = await supa
+    .from("customers")
+    .select("*")
+    .eq("id", data.id)
+    .maybeSingle();
+
   const update: Partial<Customer> = {
     email: data.email.toLowerCase(),
     full_name: blank(data.full_name),
@@ -114,6 +131,17 @@ export async function updateCustomer(input: UpdateCustomerInput) {
     return { ok: false as const, error: error.message };
   }
 
+  const changes = diffRows(before as Customer | null, update);
+  if (changes) {
+    await recordCustomerAudit({
+      customerId: data.id,
+      actorUserId: session.userId,
+      actorEmail: session.email ?? null,
+      action: "update",
+      changes,
+    });
+  }
+
   revalidatePath(`/admin/customers/${data.id}`);
   revalidatePath("/admin/customers");
   return { ok: true as const };
@@ -126,8 +154,20 @@ export async function deleteCustomer(customerId: string) {
     return { ok: false as const, error: "Invalid customer id." };
   }
   const supa = getAdminSupabase();
+  const { data: before } = await supa
+    .from("customers")
+    .select("*")
+    .eq("id", customerId)
+    .maybeSingle();
   const { error } = await supa.from("customers").delete().eq("id", customerId);
   if (error) return { ok: false as const, error: error.message };
+  await recordCustomerAudit({
+    customerId,
+    actorUserId: session.userId,
+    actorEmail: session.email ?? null,
+    action: "delete",
+    changes: before ? { snapshot: before as unknown as Record<string, unknown> } : null,
+  });
   revalidatePath("/admin/customers");
   return { ok: true as const };
 }

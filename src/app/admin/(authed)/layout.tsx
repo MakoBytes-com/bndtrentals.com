@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth/session";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 // Layout for /admin/(authed)/* — the route group that holds the dashboard
@@ -28,6 +29,21 @@ export default async function AuthedAdminLayout({
     redirect("/admin/account/change-password");
   }
 
+  // Sidebar shows an "unresolved errors" pill when error_events has rows
+  // not yet marked resolved. Fail soft on DB hiccup — we never block the
+  // panel from rendering on a count query.
+  let unresolvedErrors = 0;
+  try {
+    const supa = getAdminSupabase();
+    const { count } = await supa
+      .from("error_events")
+      .select("*", { count: "exact", head: true })
+      .is("resolved_at", null);
+    unresolvedErrors = count ?? 0;
+  } catch {
+    // ignore
+  }
+
   return (
     <AdminShell
       session={{
@@ -35,6 +51,7 @@ export default async function AuthedAdminLayout({
         email: session.email,
         role: session.role,
       }}
+      badges={{ errors: unresolvedErrors }}
     >
       {children}
     </AdminShell>

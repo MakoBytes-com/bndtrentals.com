@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   }
 
   const ip = meta.ip || "unknown";
-  if (!checkRate(`event:${ip}`, 60_000, 60)) {
+  if (!(await checkRate(`event:${ip}`, 60_000, 60))) {
     return new Response(null, { status: 429 });
   }
 

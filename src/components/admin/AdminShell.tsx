@@ -10,6 +10,10 @@ type AdminSessionLike = {
   role?: "admin" | "staff";
 };
 
+type AdminBadges = {
+  errors?: number;
+};
+
 type NavItem = { href: string; label: string; icon: ReactNode };
 
 const BURTON_NAV: NavItem[] = [
@@ -113,11 +117,14 @@ const ACCOUNT: Array<{ href: string; label: string }> = [
 
 export function AdminShell({
   session,
+  badges,
   children,
 }: {
   session: AdminSessionLike;
+  badges?: AdminBadges;
   children: ReactNode;
 }) {
+  const errorCount = badges?.errors ?? 0;
   const initials = (session.fullName ?? session.email ?? "?")
     .split(" ")
     .map((p) => p[0])
@@ -168,17 +175,28 @@ export function AdminShell({
               Web work
             </p>
             <ul className="mt-2 space-y-1 px-2">
-              {WEB_NAV.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-white/80 hover:bg-white/5 hover:text-white"
-                  >
-                    <span className="text-white/50">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              ))}
+              {WEB_NAV.map((item) => {
+                const showBadge = item.href === "/admin/errors" && errorCount > 0;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-white/80 hover:bg-white/5 hover:text-white"
+                    >
+                      <span className="text-white/50">{item.icon}</span>
+                      <span className="flex-1">{item.label}</span>
+                      {showBadge && (
+                        <span
+                          className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-bold text-white"
+                          aria-label={`${errorCount} unresolved error${errorCount === 1 ? "" : "s"}`}
+                        >
+                          {errorCount > 99 ? "99+" : errorCount}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
 
             <p className="mt-6 px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">

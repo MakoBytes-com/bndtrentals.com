@@ -1,35 +1,40 @@
 import "server-only";
 
-// In-memory token bucket per IP. Lives in the serverless function's
-// process memory — Vercel keeps a function warm long enough that this
-// dampens floods within a single instance. A different invocation can
-// see a fresh bucket, but `isbot` + UA gating already culls most spam,
-// and even a 10× burst is bounded by Vercel's per-region concurrency.
-// We intentionally don't write every request to Supabase to count it —
-// that would create the very write storm we're trying to stop.
+import { getAdminSupabase } from "@/lib/supabase/admin";
 
-type Bucket = { tokens: number; last: number };
-const buckets = new Map<string, Bucket>();
+// Distributed sliding-window rate limit, backed by the rate_limit_log
+// Postgres table + the check_and_record_rate stored function. Replaces
+// the previous in-memory token-bucket which couldn't share state across
+// Vercel function instances.
+//
+// Burton's traffic profile makes the per-request DB round-trip cheap.
+// If volume ever grows enough that this matters, swap in Upstash Redis —
+// the call site stays the same.
 
-export function checkRate(
+const supaPromise = (async () => getAdminSupabase())();
+
+export async function checkRate(
   key: string,
   windowMs: number,
   max: number,
-): boolean {
-  const now = Date.now();
-  const refillPerMs = max / windowMs;
-
-  const b = buckets.get(key);
-  if (!b) {
-    buckets.set(key, { tokens: max - 1, last: now });
+): Promise<boolean> {
+  try {
+    const supa = await supaPromise;
+    const { data, error } = await supa.rpc("check_and_record_rate", {
+      p_bucket_key: key,
+      p_window_ms: windowMs,
+      p_max: max,
+    });
+    if (error) {
+      // Fail open on DB hiccup — better to accept a request than to 429
+      // every visitor when Postgres is degraded. Rate limiter exists to
+      // bound floods, not to gate normal traffic.
+      console.warn("[rate-limit] rpc failed", error);
+      return true;
+    }
+    return data === true;
+  } catch (err) {
+    console.warn("[rate-limit] threw", err);
     return true;
   }
-
-  const elapsed = now - b.last;
-  b.tokens = Math.min(max, b.tokens + elapsed * refillPerMs);
-  b.last = now;
-
-  if (b.tokens < 1) return false;
-  b.tokens -= 1;
-  return true;
 }

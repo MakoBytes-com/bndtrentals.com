@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/privacy",
 });
 
-const LAST_UPDATED = "May 7, 2026";
+const LAST_UPDATED = "May 8, 2026";
 
 const PROCESSORS: { name: string; purpose: string; data: string; link?: string }[] = [
   {
@@ -35,6 +35,18 @@ const PROCESSORS: { name: string; purpose: string; data: string; link?: string }
       "Captures unhandled JavaScript and server-side errors so we can fix bugs.",
     data: "Stack trace, page URL, browser, anonymized session context. Email addresses, phone numbers, and free-text form fields are scrubbed before transmission.",
     link: "https://sentry.io/privacy/",
+  },
+  {
+    name: "Burton NDT first-party analytics",
+    purpose:
+      "Page-view counts, top pages, top referrers, top countries, and Core Web Vitals stored in our own database (not a third-party analytics SaaS) to understand how visitors find and use the site.",
+    data: "Path, referrer (when sent by your browser), a per-tab anonymous session id (sessionStorage UUID, expires when the tab closes), country code (from edge headers), browser user-agent, and IP. Performance metrics (LCP, INP, CLS, FCP, TTFB) when your browser supports them. We never write these rows for known bots; admin browsers self-exclude via a `mako_no_track` localStorage flag.",
+  },
+  {
+    name: "Burton NDT first-party error log",
+    purpose:
+      "An in-house duplicate of Sentry's data, stored in our own database so the admin team can triage errors directly from the panel.",
+    data: "Same fields as Sentry — message, module, stack, route, user-agent, sanitized context. Resolved errors are auto-deleted after 90 days; raw page-view and event rows are auto-deleted after 180 days.",
   },
   {
     name: "Resend (transactional email)",
@@ -113,16 +125,38 @@ export default function PrivacyPage() {
               <p className="mt-3">
                 <strong className="text-ink">Technical information we collect automatically</strong>
                 {" "}— IP address, browser user-agent, referring page, requested
-                URL, and timestamps. We use this for security (rate-limiting
-                form submissions and blocking abuse), performance monitoring
-                (page-load times, Core Web Vitals), and error diagnostics
-                (capturing JavaScript exceptions to fix bugs).
+                URL, country code (derived from your IP at the network edge),
+                and timestamps. We use this for security (rate-limiting form
+                submissions and blocking abuse), performance monitoring (page-
+                load times, Core Web Vitals like LCP / INP / CLS), and error
+                diagnostics (capturing JavaScript exceptions to fix bugs).
+                Most of these signals are stored in our own database (the
+                &ldquo;Burton NDT first-party analytics&rdquo; processor below)
+                rather than handed to a third-party analytics SaaS.
+              </p>
+              <p className="mt-3">
+                <strong className="text-ink">Per-tab session id</strong>
+                {" "}— when you load a page, our analytics tracker writes a
+                random UUID to your browser&apos;s <code className="font-mono">sessionStorage</code>{" "}
+                (key <code className="font-mono">bndt_pv_session</code>). This
+                lets us count distinct sessions and measure how long visitors
+                spend on each page. The id is wiped automatically when you
+                close the tab — it is not a persistent fingerprint.
+              </p>
+              <p className="mt-3">
+                <strong className="text-ink">How long we keep it</strong>
+                {" "}— page-view and event rows are auto-deleted after 180 days.
+                Resolved errors are auto-deleted after 90 days. Quote-form
+                submissions and customer profiles stay until you ask us to
+                delete them.
               </p>
               <p className="mt-3">
                 <strong className="text-ink">What we do NOT collect</strong>
                 {" "}— we do not run third-party advertising trackers, build
-                behavioral profiles, sell data to data brokers, or share form
-                submissions with marketing partners.
+                behavioral profiles across other websites, sell data to data
+                brokers, or share form submissions with marketing partners.
+                We do not use cookies for tracking — only standard session
+                cookies for the admin login.
               </p>
             </article>
 
