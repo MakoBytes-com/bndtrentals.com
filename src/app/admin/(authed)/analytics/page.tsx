@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getAnalyticsSnapshot } from "@/lib/analytics/queries";
+import { TrafficChart } from "./AnalyticsCharts";
 import type { QuoteLead } from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
@@ -154,7 +155,6 @@ export default async function AnalyticsPage() {
   // In-house web analytics (page_views + analytics_events) over the last
   // 30 days. Same fleet pattern used on bishopbend / makobot.
   const traffic = await getAnalyticsSnapshot();
-  const dailyMax = traffic.daily.reduce((m, d) => Math.max(m, d.views), 0) || 1;
   const refMax =
     traffic.topReferrers.named[0]?.count ??
     Math.max(traffic.topReferrers.direct, 1);
@@ -390,32 +390,12 @@ export default async function AnalyticsPage() {
           </div>
         ) : (
           <>
-            {/* Daily sparkline */}
+            {/* Daily traffic — Recharts line chart, fleet-standard */}
             <div className="mt-6 rounded-2xl border border-line bg-white p-5">
-              <p className="text-[11.5px] font-bold uppercase tracking-widest text-muted">
-                Daily page views
-              </p>
-              <div className="mt-4 flex items-end gap-1 h-32">
-                {traffic.daily.map((d, i) => {
-                  const h = (d.views / dailyMax) * 100;
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 flex flex-col items-center gap-1 group relative"
-                      title={`${d.date}: ${d.views} views, ${d.sessions} sessions`}
-                    >
-                      <div
-                        className="w-full rounded-t bg-brand/80 group-hover:bg-brand transition-colors"
-                        style={{ height: `${Math.max(h, d.views > 0 ? 4 : 0)}%` }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-2 flex justify-between text-[10px] text-muted-soft">
-                <span>{traffic.daily[0]?.date}</span>
-                <span>{traffic.daily[traffic.daily.length - 1]?.date}</span>
-              </div>
+              <h3 className="mb-4 text-[14px] font-semibold text-ink">
+                Site traffic — last 30 days
+              </h3>
+              <TrafficChart data={traffic.daily} />
             </div>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
