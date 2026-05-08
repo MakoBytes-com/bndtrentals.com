@@ -37,6 +37,10 @@ const submitSchema = z.object({
   cart: z.array(cartLineSchema).max(200).default([]),
   turnstileToken: z.string().max(2048).optional().or(z.literal("")),
   sourceUrl: z.string().max(2000).optional().or(z.literal("")),
+  // Honeypot: hidden input that real users never see. Bots that auto-fill
+  // every field will populate it. Server silently accepts (200 OK) but
+  // does NOT insert/send so the bot doesn't learn it was rejected.
+  website: z.string().max(2000).optional().or(z.literal("")),
 });
 
 export type QuoteSubmitInput = z.input<typeof submitSchema>;
@@ -68,6 +72,14 @@ export async function submitQuote(
     };
   }
   const data = parsed.data;
+
+  // Honeypot — if the hidden `website` field has anything in it, the
+  // submission is from a bot. Pretend success so the bot doesn't learn
+  // it was caught and doesn't bother adapting its scraper. Burton sees
+  // nothing in their inbox.
+  if (data.website && data.website.trim().length > 0) {
+    return { ok: true, leadId: "honeypot", emailSent: false };
+  }
 
   const hdrs = await headers();
   const ip =

@@ -76,6 +76,16 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
+  // Windows 10/11 pinned-tile fallback. Modern Edge reads manifest.webmanifest
+  // for the same purpose, but legacy IE/Edge respects the msapplication-* tags.
+  other: {
+    "msapplication-TileColor": "#0b1220",
+    "msapplication-TileImage": "/icon-270.png",
+  },
+};
+
+export const viewport = {
+  themeColor: "#0b1220",
 };
 
 const hq = LOCATIONS.find((l) => l.isHq) ?? LOCATIONS[0];

@@ -71,6 +71,8 @@ export function QuoteForm() {
       // set. Server-side verifier fails open in that case.
       turnstileToken,
       sourceUrl,
+      // Honeypot — humans never see the hidden field, bots auto-fill it.
+      website: String(fd.get("website") ?? ""),
     };
 
     startTransition(async () => {
@@ -111,6 +113,23 @@ export function QuoteForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8" noValidate>
+      {/* Honeypot — visually hidden + aria-hidden + tabIndex=-1 + autocomplete=off
+          so humans (and screen readers) never interact with it. Bots that
+          auto-fill every input will populate it; the server then silently
+          discards the submission. */}
+      <div aria-hidden="true" className="absolute left-[-10000px] top-auto h-px w-px overflow-hidden">
+        <label>
+          Website
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            defaultValue=""
+          />
+        </label>
+      </div>
+
       {/* CART ITEMS */}
       <fieldset className="rounded-2xl border border-line bg-white p-6 sm:p-8">
         <legend className="px-3 text-[12px] font-bold uppercase tracking-widest text-accent">
