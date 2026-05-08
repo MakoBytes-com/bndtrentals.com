@@ -23,49 +23,69 @@
   --radius-card: 14px;
 }
 
-:root {
-  color-scheme: light;
+/* Resets / defaults live in @layer base so Tailwind utilities (which sit in
+   @layer utilities, a higher-priority cascade layer in v4) can always
+   override them. Putting these rules unlayered makes them beat utilities
+   regardless of specificity, which broke the admin "Back to dashboard"
+   button (text-white was lost to color: inherit). Lesson logged. */
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html, body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :where(h1, h2, h3, h4, h5) {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: inherit;
+  }
+
+  :where(a) {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::selection {
+    background: var(--color-brand);
+    color: #fff;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-brand-light);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect motion-reduction preferences. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-html, body {
-  background: var(--color-canvas);
-  color: var(--color-ink);
-}
-
-body {
-  font-family: var(--font-sans);
-  font-size: 17px;
-  line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-/* Use :where() so utility classes (text-white etc.) and parent inheritance always win.
-   Without :where() the element selector beats Tailwind utilities on specificity, which
-   was leaving white-on-dark headings invisible (hero h1, dark-section h2s). */
-:where(h1, h2, h3, h4, h5) {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: inherit;
-}
-
-/* :where() so utility classes (text-white, text-brand, etc.) always beat
-   this default. Without it, this unlayered rule beats Tailwind v4's
-   @layer-utilities classes regardless of selector specificity, which made
-   the active "All" tab in /admin/leads render with invisible (inherited)
-   text instead of the intended white. */
-:where(a) {
-  color: inherit;
-  text-decoration: none;
-}
-
-::selection {
-  background: var(--color-brand);
-  color: #fff;
-}
-
-/* Utility — eyebrow label used across hero/section headings */
+/* Project-specific component classes (multi-property; users opt in by
+   applying the class). Intentionally unlayered — they're meant to win when
+   explicitly applied; if a Tailwind utility on the same element should
+   override a property, it would need !important or a more specific selector. */
 .eyebrow {
   font-family: var(--font-sans);
   font-size: 12px;
@@ -75,21 +95,12 @@ body {
   color: var(--color-accent);
 }
 
-/* Subtle hairline dividers used between dark sections */
 .hairline {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
   height: 1px;
   width: 100%;
 }
 
-/* Generic focus ring */
-*:focus-visible {
-  outline: 2px solid var(--color-brand-light);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* Skip-to-content link, hidden until focused */
 .skip-link {
   position: absolute;
   left: -10000px;
@@ -105,8 +116,6 @@ body {
   left: 1rem;
 }
 
-/* Screen-reader-only utility for adding context to links/buttons without
-   visual noise. Used for "(opens in new tab)" and "(PDF)" hints. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -117,18 +126,4 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* Respect motion-reduction preferences. Only transitions/animations are
-   suppressed; layout-impacting properties (transform on collapse) keep their
-   end state but skip the animated path. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
 }
