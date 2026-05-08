@@ -50,7 +50,12 @@ body {
   color: inherit;
 }
 
-a {
+/* :where() so utility classes (text-white, text-brand, etc.) always beat
+   this default. Without it, this unlayered rule beats Tailwind v4's
+   @layer-utilities classes regardless of selector specificity, which made
+   the active "All" tab in /admin/leads render with invisible (inherited)
+   text instead of the intended white. */
+:where(a) {
   color: inherit;
   text-decoration: none;
 }
