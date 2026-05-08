@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function BackToTop() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -11,6 +13,9 @@ export function BackToTop() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Hide on /admin/* so the public-site UX widget doesn't appear in admin.
+  if (pathname?.startsWith("/admin")) return null;
 
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });

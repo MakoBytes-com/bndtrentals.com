@@ -3,15 +3,21 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { Container } from "./Container";
 import { NAV_PRIMARY, NAV_EQUIPMENT, SITE } from "@/lib/site";
 import { cn } from "@/lib/cn";
 
 export function SiteHeader() {
+  // Public-site chrome — hide on /admin/* so the admin panel doesn't render
+  // the customer-facing nav stacked on top of its own AdminShell.
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const eqWrapRef = useRef<HTMLDivElement>(null);
+
+  if (pathname?.startsWith("/admin")) return null;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);

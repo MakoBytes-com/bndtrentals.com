@@ -3,9 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useQuoteCart } from "./QuoteCart";
 
 export function CartDrawer() {
+  const pathname = usePathname();
   const { items, count, isOpen, close, setQuantity, remove, clear, flash } = useQuoteCart();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
@@ -39,6 +41,9 @@ export function CartDrawer() {
       if (prev instanceof HTMLElement) prev.focus();
     };
   }, [isOpen, close]);
+
+  // Hide on /admin/* — the cart belongs to the public quote-form flow.
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <>

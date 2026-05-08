@@ -94,13 +94,19 @@ export function AdminShell({
       <div className="flex min-h-screen">
         {/* Sidebar */}
         <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-line bg-[#0b1220] text-white">
-          <div className="px-5 py-6 border-b border-white/10">
+          <Link
+            href="/"
+            className="block px-5 py-6 border-b border-white/10 hover:bg-white/5 transition-colors"
+            aria-label="Back to the public site"
+          >
             <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">
               Admin
             </p>
             <p className="mt-1 text-[15px] font-bold">{SITE.shortName}</p>
-            <p className="mt-0.5 text-[12px] text-white/60">bndtrentals.com</p>
-          </div>
+            <p className="mt-0.5 text-[12px] text-white/60 group-hover:text-white">
+              ← bndtrentals.com
+            </p>
+          </Link>
 
           <nav className="flex-1 overflow-y-auto py-4" aria-label="Admin">
             <p className="px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
@@ -156,10 +162,16 @@ export function AdminShell({
         </aside>
 
         {/* Main */}
-        <main className="flex-1 min-w-0">
+        <main id="main" className="flex-1 min-w-0">
           {/* Mobile top bar */}
           <div className="lg:hidden border-b border-line bg-white px-5 py-3 flex items-center justify-between">
-            <p className="text-[14px] font-bold">{SITE.shortName} admin</p>
+            <Link
+              href="/"
+              className="text-[14px] font-bold text-ink hover:text-brand"
+              aria-label="Back to the public site"
+            >
+              ← {SITE.shortName} admin
+            </Link>
             <AdminLogoutButton compact />
           </div>
 

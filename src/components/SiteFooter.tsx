@@ -1,10 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Container } from "./Container";
 import { LOCATIONS, NAV_EQUIPMENT, NAV_PRIMARY, SITE } from "@/lib/site";
 
 export function SiteFooter() {
+  const pathname = usePathname();
   const year = new Date().getFullYear();
+  // Hide on /admin/* so admin pages don't get the customer-facing footer
+  // stacked under the AdminShell.
+  if (pathname?.startsWith("/admin")) return null;
   return (
     <footer className="bg-canvas-deep text-white/80">
       <Container className="py-16 lg:py-20">
