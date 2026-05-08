@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getAnalyticsSnapshot } from "@/lib/analytics/queries";
-import { TrafficChart } from "./AnalyticsCharts";
+import {
+  getAnalyticsSnapshot,
+  rateWebVital,
+  type WebVitalMetric,
+  type WebVitalStat,
+} from "@/lib/analytics/queries";
+import { CtaPlacementChart, TrafficChart } from "./AnalyticsCharts";
 import type { QuoteLead } from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
@@ -10,7 +15,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const dynamic = "force-dynamic";
+// Cache the dashboard for 60s so opening it twice in quick succession
+// doesn't re-aggregate every page_view in the DB. Long enough that admin
+// usage feels live, short enough that fresh traffic shows up promptly.
+export const revalidate = 60;
 
 function fmtRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -534,9 +542,175 @@ export default async function AnalyticsPage() {
                 )}
               </div>
             </div>
+
+            {/* Average time on page */}
+            <div className="mt-4 rounded-2xl border border-line bg-white p-5">
+              <h3 className="text-[14px] font-semibold text-ink">
+                Average time on page
+              </h3>
+              <p className="mt-1 mb-4 text-[12.5px] text-muted">
+                How long visitors actually read each page before clicking
+                somewhere else. Last view of a session doesn&apos;t contribute.
+                Pages need at least 2 follow-up clicks to show.
+              </p>
+              {traffic.timeOnPage.length === 0 ? (
+                <p className="text-[13.5px] text-muted">
+                  Not enough multi-page sessions yet.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {traffic.timeOnPage.map((row) => (
+                    <li
+                      key={row.path}
+                      className="flex items-center justify-between border-b border-line py-2 last:border-0 text-[13.5px]"
+                    >
+                      <a
+                        href={row.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate font-mono text-[12.5px] text-ink hover:text-brand"
+                      >
+                        {row.path}
+                      </a>
+                      <span className="ml-4 shrink-0 text-right">
+                        <span className="block font-semibold text-ink">
+                          {formatDuration(row.avgSeconds)}
+                        </span>
+                        <span className="block text-[11px] text-muted-soft">
+                          {row.sampleSize} sample{row.sampleSize === 1 ? "" : "s"}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* CTA placement breakdown */}
+            <div className="mt-4 rounded-2xl border border-line bg-white p-5">
+              <h3 className="text-[14px] font-semibold text-ink">
+                CTA placement performance
+              </h3>
+              <p className="mt-1 mb-4 text-[12.5px] text-muted">
+                Which button location is actually pulling its weight — phone
+                taps and quote-form clicks tagged by where they fired
+                (header / footer / mobile drawer / location card).
+              </p>
+              {traffic.ctaByPlacement.length === 0 ? (
+                <p className="text-[13.5px] text-muted">
+                  No CTA clicks captured yet.
+                </p>
+              ) : (
+                <CtaPlacementChart data={traffic.ctaByPlacement} />
+              )}
+            </div>
+
+            {/* Core Web Vitals */}
+            <div className="mt-4 rounded-2xl border border-line bg-white p-5">
+              <h3 className="text-[14px] font-semibold text-ink">
+                Core Web Vitals — field data
+              </h3>
+              <p className="mt-1 mb-4 text-[12.5px] text-muted leading-relaxed">
+                Real visitor browsers report LCP / INP / CLS / FCP / TTFB
+                on page-hide. P75 is the threshold Google actually uses to
+                rank the site — Lighthouse scores are synthetic. Goal: all
+                five in the green band.
+              </p>
+              {traffic.webVitals.every((v) => v.samples === 0) ? (
+                <p className="text-[13.5px] text-muted">
+                  Collecting data. Visit a public page and navigate away to
+                  seed the first samples — Web Vitals fire on page-hide.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  {traffic.webVitals.map((v) => (
+                    <WebVitalTile key={v.metric} stat={v} />
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s === 0 ? `${m}m` : `${m}m ${s}s`;
+}
+
+const VITAL_META: Record<
+  WebVitalMetric,
+  { label: string; plain: string; goal: string; toDisplay: (p: number) => string }
+> = {
+  lcp: {
+    label: "LCP",
+    plain: "Largest Contentful Paint — when the main content shows up.",
+    goal: "Good: under 2.5s",
+    toDisplay: (p) => `${(p / 1000).toFixed(2)}s`,
+  },
+  inp: {
+    label: "INP",
+    plain: "Interaction to Next Paint — how fast clicks/taps respond.",
+    goal: "Good: under 200ms",
+    toDisplay: (p) => `${Math.round(p)}ms`,
+  },
+  cls: {
+    label: "CLS",
+    plain: "Cumulative Layout Shift — how much things jump while loading.",
+    goal: "Good: under 0.1",
+    toDisplay: (p) => (p / 1000).toFixed(3),
+  },
+  fcp: {
+    label: "FCP",
+    plain: "First Contentful Paint — when anything shows up at all.",
+    goal: "Good: under 1.8s",
+    toDisplay: (p) => `${(p / 1000).toFixed(2)}s`,
+  },
+  ttfb: {
+    label: "TTFB",
+    plain: "Time to First Byte — how fast our server starts responding.",
+    goal: "Good: under 800ms",
+    toDisplay: (p) => `${Math.round(p)}ms`,
+  },
+};
+
+function WebVitalTile({ stat }: { stat: WebVitalStat }) {
+  const meta = VITAL_META[stat.metric];
+  const rating = rateWebVital(stat.metric, stat.p75);
+  const colors = {
+    good: "bg-emerald-50 border-emerald-300 text-emerald-800",
+    "needs-improvement": "bg-amber-50 border-amber-300 text-amber-800",
+    poor: "bg-rose-50 border-rose-300 text-rose-800",
+    empty: "bg-canvas-tint border-line text-muted",
+  }[rating];
+  const ratingLabel = {
+    good: "Good",
+    "needs-improvement": "Needs work",
+    poor: "Poor",
+    empty: "—",
+  }[rating];
+  return (
+    <div className={`rounded-xl border p-4 ${colors}`} title={meta.plain}>
+      <div className="flex items-baseline justify-between">
+        <span className="text-[12px] font-bold uppercase tracking-widest">
+          {meta.label}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest">
+          {ratingLabel}
+        </span>
+      </div>
+      <p className="mt-1 text-[11.5px] leading-snug opacity-80">{meta.plain}</p>
+      <div className="mt-3 text-2xl font-bold tabular-nums">
+        {stat.samples === 0 ? "—" : meta.toDisplay(stat.p75)}
+      </div>
+      <div className="mt-1 text-[11px] opacity-70">
+        P75 · {stat.samples} sample{stat.samples === 1 ? "" : "s"} · {meta.goal}
+      </div>
     </div>
   );
 }

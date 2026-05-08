@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import { SITE } from "@/lib/site";
 import { useQuoteCart } from "@/components/QuoteCart";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { track } from "@/lib/track";
 import { submitQuote, type QuoteSubmitInput } from "./actions";
 
 const INTERESTS = [
@@ -75,9 +76,11 @@ export function QuoteForm() {
     startTransition(async () => {
       const result = await submitQuote(payload);
       if (result.ok) {
+        track("Quote Submitted", { itemCount: items.length });
         setSubmitted(true);
         clear();
       } else {
+        track("Quote Submit Failed", { reason: result.error });
         setErrorMessage(result.error);
         setFieldErrors(result.fieldErrors ?? {});
       }

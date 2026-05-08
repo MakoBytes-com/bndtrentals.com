@@ -7,32 +7,37 @@ import { usePathname } from "next/navigation";
 import { Container } from "./Container";
 import { NAV_PRIMARY, NAV_EQUIPMENT, SITE } from "@/lib/site";
 import { cn } from "@/lib/cn";
+import { track } from "@/lib/track";
 
 export function SiteHeader() {
   // Public-site chrome — hide on /admin/* so the admin panel doesn't render
   // the customer-facing nav stacked on top of its own AdminShell.
   const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin") ?? false;
   const [open, setOpen] = useState(false);
   const [eqOpen, setEqOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const eqWrapRef = useRef<HTMLDivElement>(null);
 
-  if (pathname?.startsWith("/admin")) return null;
-
+  // Hooks must run unconditionally per rules-of-hooks. Each effect
+  // self-disables for /admin/* so the listener never wires up there.
   useEffect(() => {
+    if (isAdmin) return;
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
+    if (isAdmin) return;
     document.documentElement.style.overflow = open ? "hidden" : "";
     return () => { document.documentElement.style.overflow = ""; };
-  }, [open]);
+  }, [open, isAdmin]);
 
   // Equipment dropdown: close on Escape, close on click outside.
   useEffect(() => {
+    if (isAdmin) return;
     if (!eqOpen) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setEqOpen(false);
@@ -47,7 +52,9 @@ export function SiteHeader() {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [eqOpen]);
+  }, [eqOpen, isAdmin]);
+
+  if (isAdmin) return null;
 
   return (
     <header className="sticky top-0 z-40">
@@ -55,7 +62,11 @@ export function SiteHeader() {
       <div className="bg-[var(--color-canvas-deep)] text-white/90 text-[13px]">
         <Container className="flex h-9 items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <a href={`tel:${SITE.primaryPhoneTel}`} className="flex items-center gap-2 hover:text-white">
+            <a
+              href={`tel:${SITE.primaryPhoneTel}`}
+              onClick={() => track("Phone Call — Header", { phone: SITE.primaryPhoneTel })}
+              className="flex items-center gap-2 hover:text-white"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
               </svg>
@@ -182,6 +193,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-3">
             <Link
               href="/quote"
+              onClick={() => track("Quote CTA — Header")}
               className="hidden sm:inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-[14px] font-bold text-white hover:bg-accent-dark transition-colors"
             >
               Request a Quote
@@ -235,7 +247,10 @@ export function SiteHeader() {
               <div className="my-3 h-px bg-line" />
               <Link
                 href="/quote"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  track("Quote CTA — Mobile Drawer");
+                  setOpen(false);
+                }}
                 className="flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-[15px] font-bold text-white hover:bg-accent-dark"
               >
                 Request a Quote
@@ -243,6 +258,7 @@ export function SiteHeader() {
               </Link>
               <a
                 href={`tel:${SITE.primaryPhoneTel}`}
+                onClick={() => track("Phone Call — Mobile Drawer", { phone: SITE.primaryPhoneTel })}
                 className="mt-3 flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-[15px] font-semibold text-ink hover:bg-canvas-tint"
               >
                 Call {SITE.primaryPhone}

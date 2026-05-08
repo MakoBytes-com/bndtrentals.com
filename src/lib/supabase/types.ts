@@ -183,6 +183,23 @@ export type AnalyticsEvent = {
   created_at: string;
 };
 
+export type ErrorEventLevel = "error" | "warn";
+
+export type ErrorEvent = {
+  id: string;
+  level: ErrorEventLevel;
+  module: string;
+  message: string;
+  fingerprint: string;
+  stack: string | null;
+  path: string | null;
+  user_agent: string | null;
+  context: Record<string, unknown> | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  occurred_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -236,6 +253,12 @@ export type Database = {
         AnalyticsEvent,
         Partial<AnalyticsEvent> & Pick<AnalyticsEvent, "name" | "path" | "session_id">,
         Partial<AnalyticsEvent>
+      >;
+      error_events: TableDef<
+        ErrorEvent,
+        Partial<ErrorEvent> &
+          Pick<ErrorEvent, "level" | "module" | "message" | "fingerprint">,
+        Partial<ErrorEvent>
       >;
     };
     Views: Record<string, never>;

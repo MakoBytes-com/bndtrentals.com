@@ -145,6 +145,11 @@ export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
         err instanceof DOMException &&
         (err.name === "QuotaExceededError" || err.code === 22);
       if (isQuota) {
+        // Persist failure surfaces as a UI flash. The lint rule (set-state-
+        // in-effect) flags this, but here we *only* set state when the
+        // browser storage quota itself is exceeded — a true side-effect
+        // condition that can't be derived during render.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFlash("Browser storage full — your cart won't persist. Submit your quote to keep it.");
       } else {
         console.warn("[bndt cart] persist failed", err);

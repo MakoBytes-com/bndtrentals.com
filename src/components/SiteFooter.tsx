@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Container } from "./Container";
 import { LOCATIONS, NAV_EQUIPMENT, NAV_PRIMARY, SITE } from "@/lib/site";
+import { track } from "@/lib/track";
 
 export function SiteFooter() {
   const pathname = usePathname();
@@ -34,12 +35,14 @@ export function SiteFooter() {
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/quote"
+                onClick={() => track("Quote CTA — Footer")}
                 className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[13px] font-bold text-white hover:bg-accent-dark"
               >
                 Request a Quote
               </Link>
               <a
                 href={`tel:${SITE.primaryPhoneTel}`}
+                onClick={() => track("Phone Call — Footer", { phone: SITE.primaryPhoneTel })}
                 className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-[13px] font-semibold text-white hover:bg-white/5"
               >
                 {SITE.primaryPhone}
@@ -93,7 +96,11 @@ export function SiteFooter() {
                   </p>
                   <p className="text-white/65">{loc.street}</p>
                   <p className="text-white/65">{loc.cityState} {loc.zip}</p>
-                  <a href={`tel:${loc.phoneTel}`} className="mt-1 inline-block text-white/85 hover:text-white font-medium">
+                  <a
+                    href={`tel:${loc.phoneTel}`}
+                    onClick={() => track("Phone Call — Footer Location", { phone: loc.phoneTel, location: loc.cityState })}
+                    className="mt-1 inline-block text-white/85 hover:text-white font-medium"
+                  >
                     {loc.phone}
                   </a>
                 </li>

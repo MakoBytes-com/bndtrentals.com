@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { DailyPoint } from "@/lib/analytics/queries";
+import type { CtaPlacement, DailyPoint } from "@/lib/analytics/queries";
 
 // Burton admin palette — matches AdminShell's dark sidebar / canvas-tint body.
 const AXIS = "#6b7891";
@@ -68,17 +68,13 @@ export function TrafficChart({ data }: { data: DailyPoint[] }) {
   );
 }
 
-export function LeadFunnelChart({
-  data,
-}: {
-  data: Array<{ status: string; count: number }>;
-}) {
+export function CtaPlacementChart({ data }: { data: CtaPlacement[] }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <BarChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
         <XAxis
-          dataKey="status"
+          dataKey="location"
           tick={{ fontSize: 11, fill: AXIS }}
           stroke={AXIS}
         />
@@ -88,7 +84,19 @@ export function LeadFunnelChart({
           allowDecimals={false}
         />
         <Tooltip contentStyle={tooltipStyle} />
-        <Bar dataKey="count" fill={VIEWS} radius={[4, 4, 0, 0]} name="Leads" />
+        <Legend wrapperStyle={{ fontSize: 12, color: AXIS }} />
+        <Bar
+          dataKey="phone"
+          fill={VIEWS}
+          name="Phone Calls"
+          radius={[4, 4, 0, 0]}
+        />
+        <Bar
+          dataKey="quote"
+          fill={SESSIONS}
+          name="Quote CTAs"
+          radius={[4, 4, 0, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

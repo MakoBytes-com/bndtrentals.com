@@ -5,6 +5,7 @@ import {
   getResendFrom,
   getResendNotificationTo,
 } from "./resend";
+import { logError } from "@/lib/log";
 
 export type QuoteCartLine = {
   productName: string;
@@ -188,12 +189,12 @@ export async function sendQuoteNotification(
       text: renderText(payload),
     });
     if (result.error) {
-      console.warn("[quote-email] resend rejected", result.error);
+      logError("quote-email", result.error, { context: { leadId: payload.leadId } });
       return { sent: false, reason: result.error.message ?? "resend_error" };
     }
     return { sent: true };
   } catch (err) {
-    console.warn("[quote-email] send threw", err);
+    logError("quote-email", err, { context: { leadId: payload.leadId } });
     return { sent: false, reason: err instanceof Error ? err.message : "unknown_error" };
   }
 }
