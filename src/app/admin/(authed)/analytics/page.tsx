@@ -381,23 +381,34 @@ export default async function AnalyticsPage() {
           />
         </div>
 
-        {!traffic.hasAnyData ? (
-          <div className="mt-6 rounded-2xl border border-line bg-white p-6 text-[14px] text-muted">
-            No traffic captured yet. Visit{" "}
-            <code className="font-mono">bndtrentals.com</code> from a browser
-            that doesn&apos;t have <code className="font-mono">mako_no_track</code>{" "}
-            set — first row should appear within seconds.
-          </div>
-        ) : (
-          <>
-            {/* Daily traffic — Recharts line chart, fleet-standard */}
-            <div className="mt-6 rounded-2xl border border-line bg-white p-5">
-              <h3 className="mb-4 text-[14px] font-semibold text-ink">
-                Site traffic — last 30 days
-              </h3>
-              <TrafficChart data={traffic.daily} />
-            </div>
+        {/* Daily traffic — Recharts line chart, fleet-standard.
+            Always render the chart frame (even with all-zero days) so the
+            dashboard looks the same before and after traffic lands. */}
+        <div className="mt-6 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-1 text-[14px] font-semibold text-ink">
+            Site traffic — last 30 days
+          </h3>
+          {!traffic.hasAnyData && (
+            <p className="mb-4 text-[12.5px] text-muted">
+              Collecting data. Open{" "}
+              <a
+                href="https://bndt-showcase.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-brand underline-offset-2 hover:underline"
+              >
+                the public site
+              </a>{" "}
+              in a different browser (or incognito) — your admin browser
+              auto-excludes itself via the <code className="font-mono">mako_no_track</code>{" "}
+              localStorage flag. First row should appear within seconds.
+            </p>
+          )}
+          <TrafficChart data={traffic.daily} />
+        </div>
 
+        {traffic.hasAnyData && (
+          <>
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               {/* Top pages */}
               <div className="rounded-2xl border border-line bg-white p-5">
