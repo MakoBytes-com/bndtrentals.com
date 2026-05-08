@@ -4,7 +4,11 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
-import { getCategories, getTotalProductCount } from "@/lib/catalog";
+import {
+  getAllPublishedProducts,
+  getCategories,
+  getTotalProductCount,
+} from "@/lib/catalog";
 import { pageMetadata } from "@/lib/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
@@ -27,19 +31,17 @@ const PILLAR_IMAGES: Record<string, string> = {
 };
 
 export default async function EquipmentPage() {
-  const [categories, total] = await Promise.all([
+  const [categories, total, allProducts] = await Promise.all([
     getCategories(),
     getTotalProductCount(),
+    getAllPublishedProducts(),
   ]);
 
-  // Per-category counts via parallel head-only queries.
-  const counts = await Promise.all(
-    categories.map(async (c) => {
-      const { getAllPublishedProducts } = await import("@/lib/catalog");
-      const all = await getAllPublishedProducts();
-      return all.filter((x) => x.category.id === c.id).length;
-    }),
-  );
+  // Build a single category_id → product count map and look up per render.
+  const countById = new Map<string, number>();
+  for (const { category } of allProducts) {
+    countById.set(category.id, (countById.get(category.id) ?? 0) + 1);
+  }
 
   return (
     <>
@@ -52,8 +54,8 @@ export default async function EquipmentPage() {
       <section className="bg-canvas py-20 lg:py-28">
         <Container>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {categories.map((c, i) => {
-              const productCount = counts[i] ?? 0;
+            {categories.map((c) => {
+              const productCount = countById.get(c.id) ?? 0;
               const heroImage =
                 c.hero_image ?? PILLAR_IMAGES[c.slug] ?? "ndt-img.jpg";
               return (
