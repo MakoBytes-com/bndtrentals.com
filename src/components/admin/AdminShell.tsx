@@ -71,6 +71,7 @@ const NAV: Array<{
 
 const ACCOUNT: Array<{ href: string; label: string }> = [
   { href: "/admin/account/change-password", label: "Change password" },
+  { href: "/admin/account/totp-setup", label: "Two-factor (TOTP)" },
 ];
 
 export function AdminShell({
