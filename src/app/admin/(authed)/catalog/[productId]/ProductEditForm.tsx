@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { updateProduct, uploadProductPdf } from "./actions";
+import { useRouter } from "next/navigation";
+import {
+  updateProduct,
+  uploadProductPdf,
+  deleteProduct,
+} from "./actions";
 
 type Initial = {
   id: string;
@@ -23,6 +28,7 @@ export function ProductEditForm({
   initial: Initial;
   categoryName: string | null;
 }) {
+  const router = useRouter();
   const [form, setForm] = useState<Initial>(initial);
   const [applicationsText, setApplicationsText] = useState(
     initial.applications.join("\n"),
@@ -34,6 +40,23 @@ export function ProductEditForm({
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletePending, startDeleteTransition] = useTransition();
+
+  function handleDelete() {
+    setDeleteError(null);
+    startDeleteTransition(async () => {
+      const result = await deleteProduct(form.id);
+      if (result.ok) {
+        router.replace("/admin/catalog");
+        router.refresh();
+        return;
+      }
+      setDeleteError(result.error);
+    });
+  }
 
   function handleSave() {
     setError(null);
@@ -232,6 +255,55 @@ export function ProductEditForm({
           Uncheck to hide this product everywhere on the public site without
           deleting it.
         </p>
+      </section>
+
+      <section className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
+        <h2 className="text-[12px] font-bold uppercase tracking-widest text-rose-700">
+          Danger zone
+        </h2>
+        <p className="mt-3 text-[14px] text-rose-900">
+          Deleting removes this product from the catalog permanently. Existing
+          quote leads keep their cart snapshot, but the public site can&apos;t
+          reach this product anymore. Prefer unpublishing if you might want it
+          back.
+        </p>
+
+        {!deleteConfirming ? (
+          <button
+            type="button"
+            onClick={() => setDeleteConfirming(true)}
+            className="mt-4 rounded-full border border-rose-300 bg-white px-5 py-2.5 text-[13.5px] font-bold text-rose-700 hover:bg-rose-100"
+          >
+            Delete this product
+          </button>
+        ) : (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-[13.5px] font-semibold text-rose-800">
+              Sure? This can&apos;t be undone.
+            </span>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deletePending}
+              className="rounded-full bg-rose-600 px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-rose-700 disabled:opacity-60"
+            >
+              {deletePending ? "Deleting…" : "Yes, delete"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirming(false)}
+              className="rounded-full border border-line bg-white px-5 py-2.5 text-[13.5px] font-semibold text-muted hover:bg-canvas-tint"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {deleteError && (
+          <p role="alert" className="mt-3 rounded-lg bg-white p-2.5 text-[13px] font-semibold text-rose-700 ring-1 ring-rose-200">
+            {deleteError}
+          </p>
+        )}
       </section>
 
       <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-2xl border border-line bg-white px-5 py-4 shadow-lg">

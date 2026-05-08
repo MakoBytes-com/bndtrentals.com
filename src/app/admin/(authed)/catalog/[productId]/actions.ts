@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getAdminSession } from "@/lib/auth/session";
@@ -124,4 +125,31 @@ export async function uploadProductPdf(formData: FormData): Promise<
 
   revalidatePath(`/admin/catalog/${productId}`);
   return { ok: true, filename: path };
+}
+
+export async function deleteProduct(productId: string) {
+  const session = await getAdminSession();
+  if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (typeof productId !== "string" || productId.length < 10) {
+    return { ok: false as const, error: "Invalid product id." };
+  }
+
+  const supa = getAdminSupabase();
+  const { error } = await supa
+    .from("catalog_products")
+    .delete()
+    .eq("id", productId);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/admin/catalog");
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
+
+export async function deleteProductAndRedirect(productId: string) {
+  const result = await deleteProduct(productId);
+  if (result.ok) {
+    redirect("/admin/catalog");
+  }
+  return result;
 }
