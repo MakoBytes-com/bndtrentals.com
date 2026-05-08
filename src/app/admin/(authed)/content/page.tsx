@@ -150,9 +150,9 @@ export default async function ContentListPage({
       </div>
 
       <p className="mt-6 text-[12.5px] text-muted-soft">
-        Note: page_sections is plumbed in the database. Wiring specific public
-        pages (about, team, applications) to read body_html from these rows
-        ships next, alongside the catalog public-read swap (Phase 3-B-2 / 3-D-2).
+        Note: section rows are stored in the database now. Wiring specific
+        public pages (about, team, applications) to render body_html from
+        these rows still ships in a follow-up — Phase 3-D-2.
       </p>
     </div>
   );

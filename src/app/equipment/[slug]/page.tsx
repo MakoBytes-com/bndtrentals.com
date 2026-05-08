@@ -6,11 +6,14 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
-import { CATEGORIES, CATEGORY_BY_SLUG } from "@/lib/equipment";
+import { getCategories, getCategoryBySlug } from "@/lib/catalog";
 import { pageMetadata } from "@/lib/page-metadata";
 
-export function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ slug: c.slug }));
+export const dynamic = "force-dynamic";
+
+export async function generateStaticParams() {
+  const cats = await getCategories();
+  return cats.map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({
@@ -19,12 +22,18 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const cat = CATEGORY_BY_SLUG[slug];
-  if (!cat) return pageMetadata({ title: "Equipment", description: "Browse equipment.", path: "/equipment" });
+  const found = await getCategoryBySlug(slug);
+  if (!found) {
+    return pageMetadata({
+      title: "Equipment",
+      description: "Browse equipment.",
+      path: "/equipment",
+    });
+  }
   return pageMetadata({
-    title: `${cat.name} Equipment`,
-    description: cat.description,
-    path: `/equipment/${cat.slug}`,
+    title: `${found.category.name} Equipment`,
+    description: found.category.description ?? found.category.tagline ?? `${found.category.name} equipment from Burton NDT.`,
+    path: `/equipment/${found.category.slug}`,
   });
 }
 
@@ -34,65 +43,40 @@ export default async function EquipmentCategoryPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const cat = CATEGORY_BY_SLUG[slug];
-  if (!cat) notFound();
-
-  const productCount = cat.subcategories.reduce(
-    (n, s) => n + s.products.length,
-    0
-  );
+  const found = await getCategoryBySlug(slug);
+  if (!found) notFound();
+  const { category: cat, products, subcategories } = found;
+  const productCount = products.length;
 
   return (
     <>
       <PageHero
-        eyebrow={`${cat.short} · ${productCount} models`}
+        eyebrow={`${cat.shortLabel} · ${productCount} models`}
         title={cat.name}
-        description={cat.description}
+        description={cat.description ?? cat.tagline ?? undefined}
       />
 
       {/* Subcategory nav (sticky on desktop) */}
-      <section className="sticky top-[108px] z-20 border-b border-line bg-white/95 backdrop-blur">
-        <Container>
-          <nav className="flex gap-x-6 gap-y-2 overflow-x-auto py-3 text-[13.5px]" aria-label="Subcategories">
-            {cat.subcategories.map((s, i) => (
-              <a
-                key={i}
-                href={`#${slugify(s.name)}`}
-                className="whitespace-nowrap font-semibold text-muted hover:text-brand"
-              >
-                {s.name}
-              </a>
-            ))}
-          </nav>
-        </Container>
-      </section>
-
-      {/* Applications */}
-      {cat.applications.length > 0 && (
-        <section className="bg-canvas-tint py-12">
+      {subcategories.length > 1 && (
+        <section className="sticky top-[108px] z-20 border-b border-line bg-white/95 backdrop-blur">
           <Container>
-            <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
-              <div className="lg:col-span-4">
-                <span className="eyebrow">Common applications</span>
-                <h2 className="mt-2 text-2xl font-bold">{cat.short} use cases</h2>
-              </div>
-              <div className="lg:col-span-8">
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-[15px]">
-                  {cat.applications.map((a) => (
-                    <li key={a} className="flex items-start gap-3 text-ink-soft">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-accent" />
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <nav className="flex gap-x-6 gap-y-2 overflow-x-auto py-3 text-[13.5px]" aria-label="Subcategories">
+              {subcategories.map((s) => (
+                <a
+                  key={s.name}
+                  href={`#${slugify(s.name)}`}
+                  className="whitespace-nowrap font-semibold text-muted hover:text-brand"
+                >
+                  {s.name}
+                </a>
+              ))}
+            </nav>
           </Container>
         </section>
       )}
 
       {/* Subcategory product grids */}
-      {cat.subcategories.map((sub) => (
+      {subcategories.map((sub) => (
         <section
           key={sub.name}
           id={slugify(sub.name)}
@@ -105,9 +89,6 @@ export default async function EquipmentCategoryPage({
                 {sub.products.length} {sub.products.length === 1 ? "model" : "models"}
               </span>
             </div>
-            {sub.description && (
-              <p className="mt-2 max-w-2xl text-[15px] text-muted">{sub.description}</p>
-            )}
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {sub.products.map((p) => (
                 <article
@@ -118,13 +99,15 @@ export default async function EquipmentCategoryPage({
                     href={`/equipment/${cat.slug}/${p.slug}`}
                     className="block aspect-[4/3] bg-canvas-tint p-5 flex items-center justify-center"
                   >
-                    <Image
-                      src={`/images/${p.image}`}
-                      alt={p.name}
-                      width={400}
-                      height={400}
-                      className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                    />
+                    {p.image && (
+                      <Image
+                        src={`/images/${p.image}`}
+                        alt={p.name}
+                        width={400}
+                        height={400}
+                        className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                      />
+                    )}
                   </Link>
                   <div className="border-t border-line p-4 flex-1 flex flex-col">
                     {p.manufacturer && (
@@ -143,7 +126,7 @@ export default async function EquipmentCategoryPage({
                         productSlug={p.slug}
                         categorySlug={cat.slug}
                         productName={p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name}
-                        productImage={p.image}
+                        productImage={p.image ?? undefined}
                         size="sm"
                       />
                       {p.pdf && (
@@ -169,7 +152,7 @@ export default async function EquipmentCategoryPage({
       ))}
 
       <CtaBanner
-        eyebrow={`Renting ${cat.short}?`}
+        eyebrow={`Renting ${cat.shortLabel}?`}
         title="Pick the model — we'll handle the rest."
         body="Same-day quote, calibrated and shipped from the closest hub. Add accessories and consumables in one order."
       />

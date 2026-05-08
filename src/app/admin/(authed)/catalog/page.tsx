@@ -319,10 +319,8 @@ export default async function CatalogListPage({
       )}
 
       <p className="mt-6 text-[12.5px] text-muted-soft">
-        Note: edits here write to the bndt-prod database. The public site
-        currently reads from <code className="font-mono">src/lib/equipment.ts</code>{" "}
-        (static), so admin edits won&apos;t appear on the public site until that
-        is swapped over (Phase 3-B-2).
+        Edits write to the bndt-prod database and appear on the public site
+        on the next request — no redeploy needed.
       </p>
     </div>
   );

@@ -1,15 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/Container";
-import { CATEGORIES, totalProductCount } from "@/lib/equipment";
+import { getCategories, getTotalProductCount } from "@/lib/catalog";
 import { LOCATIONS, SITE } from "@/lib/site";
 
-const STATS = [
-  { value: "35+", label: "Years in business" },
-  { value: "3", label: "U.S. service hubs" },
-  { value: `${totalProductCount()}+`, label: "Equipment models" },
-  { value: "24h", label: "Most rentals shipped within" },
-];
+export const dynamic = "force-dynamic";
 
 const FEATURED = [
   { name: "Olympus 38DL Plus", category: "Ultrasonic Thickness Gauge", image: "olympus-38DL.jpg", href: "/equipment/ndt/olympus-38dl-plus" },
@@ -33,17 +28,28 @@ const INDUSTRIES = [
   "Mining",
 ];
 
-const PILLARS = CATEGORIES.slice(0, 3).map((c) => ({
-  ...c,
-  pillarImage:
-    c.slug === "ndt"
-      ? "ndt-img.jpg"
-      : c.slug === "rvi"
-        ? "rvi-img.jpg"
-        : "pmi-img.jpg",
-}));
+const PILLAR_IMAGE_FALLBACK: Record<string, string> = {
+  ndt: "ndt-img.jpg",
+  rvi: "rvi-img.jpg",
+  pmi: "pmi-img.jpg",
+};
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [categories, total] = await Promise.all([
+    getCategories(),
+    getTotalProductCount(),
+  ]);
+  const pillars = categories.slice(0, 3).map((c) => ({
+    ...c,
+    pillarImage: c.hero_image ?? PILLAR_IMAGE_FALLBACK[c.slug] ?? "ndt-img.jpg",
+  }));
+  const STATS = [
+    { value: "35+", label: "Years in business" },
+    { value: "3", label: "U.S. service hubs" },
+    { value: `${total}+`, label: "Equipment models" },
+    { value: "24h", label: "Most rentals shipped within" },
+  ];
+
   return (
     <>
       {/* HERO */}
@@ -156,7 +162,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {PILLARS.map((p) => (
+            {pillars.map((p) => (
               <Link
                 key={p.slug}
                 href={`/equipment/${p.slug}`}
@@ -173,12 +179,12 @@ export default function HomePage() {
                 </div>
                 <div className="p-6">
                   <p className="text-[12px] font-bold uppercase tracking-widest text-accent">
-                    {p.short}
+                    {p.shortLabel}
                   </p>
                   <h3 className="mt-2 text-2xl font-bold text-ink">{p.name}</h3>
                   <p className="mt-3 text-[15px] text-muted leading-relaxed">{p.tagline}</p>
                   <p className="mt-5 inline-flex items-center gap-1.5 text-[14px] font-semibold text-brand">
-                    Browse {p.short.toLowerCase()} fleet
+                    Browse {p.shortLabel.toLowerCase()} fleet
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </p>
                 </div>

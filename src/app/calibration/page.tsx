@@ -4,9 +4,11 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
-import { CATEGORIES } from "@/lib/equipment";
+import { getCategories, getCategoryBySlug } from "@/lib/catalog";
 import { SITE } from "@/lib/site";
 import { pageMetadata } from "@/lib/page-metadata";
+
+export const dynamic = "force-dynamic";
 
 function calSlug(s: string) {
   return "cal-" + s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -37,7 +39,17 @@ const STEPS = [
   },
 ];
 
-export default function CalibrationPage() {
+export default async function CalibrationPage() {
+  const categories = await getCategories();
+  const categoriesWithSubs = await Promise.all(
+    categories.map(async (c) => {
+      const detail = await getCategoryBySlug(c.slug);
+      return {
+        category: c,
+        subcategories: detail?.subcategories ?? [],
+      };
+    }),
+  );
   return (
     <>
       <PageHero
@@ -122,7 +134,7 @@ export default function CalibrationPage() {
             </p>
           </div>
 
-          {CATEGORIES.map((cat) => (
+          {categoriesWithSubs.map(({ category: cat, subcategories }) => (
             <div key={cat.slug} className="mt-12">
               <div className="flex items-baseline justify-between gap-4">
                 <h3 className="text-xl font-bold text-ink">{cat.name}</h3>
@@ -130,18 +142,18 @@ export default function CalibrationPage() {
                   href={`/equipment/${cat.slug}`}
                   className="text-[13px] font-semibold text-muted hover:text-brand"
                 >
-                  View {cat.short} catalog →
+                  View {cat.shortLabel} catalog →
                 </Link>
               </div>
               <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {cat.subcategories.map((sub) => (
+                {subcategories.map((sub) => (
                   <li
                     key={sub.name}
                     className="flex items-center justify-between gap-3 rounded-lg bg-white p-4 ring-1 ring-line"
                   >
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
-                        {cat.short}
+                        {cat.shortLabel}
                       </p>
                       <p className="mt-0.5 text-[14.5px] font-semibold text-ink leading-snug">
                         {sub.name}
@@ -150,7 +162,7 @@ export default function CalibrationPage() {
                     <AddToQuoteButton
                       productSlug={calSlug(`${cat.slug}-${sub.name}`)}
                       categorySlug="calibration"
-                      productName={`Calibration — ${sub.name} (${cat.short})`}
+                      productName={`Calibration — ${sub.name} (${cat.shortLabel})`}
                       kind="calibration"
                       size="sm"
                       variant="ghost"

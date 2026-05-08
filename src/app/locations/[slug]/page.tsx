@@ -6,7 +6,7 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { SITE, LOCATIONS } from "@/lib/site";
-import { CATEGORIES } from "@/lib/equipment";
+import { getCategories } from "@/lib/catalog";
 import { LOCATION_CONTENT, locationContentBySlug } from "@/lib/location-content";
 import { pageMetadata } from "@/lib/page-metadata";
 
@@ -56,8 +56,9 @@ export default async function LocationPage({
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   // Equipment categories that actually fit this hub's industries
-  const featured = CATEGORIES.filter((c) =>
-    content.applicationsHighlight.includes(c.short),
+  const allCategories = await getCategories();
+  const featured = allCategories.filter((c) =>
+    content.applicationsHighlight.includes(c.shortLabel),
   );
 
   const localBusinessSchema = {
@@ -212,7 +213,7 @@ export default async function LocationPage({
                 href={`/equipment/${c.slug}`}
                 className="group rounded-xl border border-line bg-white p-5 transition-all hover:border-brand hover:shadow-md"
               >
-                <p className="text-[12px] font-bold uppercase tracking-widest text-accent">{c.short}</p>
+                <p className="text-[12px] font-bold uppercase tracking-widest text-accent">{c.shortLabel}</p>
                 <p className="mt-2 text-[16px] font-semibold text-ink leading-snug">{c.name}</p>
                 <p className="mt-2 text-[13.5px] text-muted leading-relaxed">{c.tagline}</p>
               </Link>

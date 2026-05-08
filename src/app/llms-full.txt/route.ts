@@ -1,35 +1,45 @@
 import { SITE, LOCATIONS } from "@/lib/site";
-import { CATEGORIES } from "@/lib/equipment";
+import { getCategories, getCategoryBySlug } from "@/lib/catalog";
 import { APPLICATIONS, APP_HUB } from "@/lib/applications";
 import { PROJECTS } from "@/lib/projects";
 
-export const dynamic = "force-static";
+// Pulled from bndt-prod so admin catalog edits propagate immediately.
+export const dynamic = "force-dynamic";
 
 // llms-full.txt — exhaustive AI-crawler context for Burton NDT.
 // Companion to llms.txt (which is the brief overview).
 // Spec: https://llmstxt.org
 
-export function GET() {
+export async function GET() {
   const locations = LOCATIONS.map(
     (l) =>
       `- ${l.cityState}${l.isHq ? " (HQ)" : ""}\n  Address: ${l.street}, ${l.cityState} ${l.zip}\n  Phone: ${l.phone}\n  Region: ${l.region}`,
   ).join("\n\n");
 
-  const equipment = CATEGORIES.map((c) => {
-    const subs = c.subcategories
-      .map((sub) => {
-        const items = sub.products
-          .map((p) => {
-            const mfg = p.manufacturer ? `${p.manufacturer} ` : "";
-            const desc = p.description ? ` — ${p.description}` : "";
-            return `    - ${mfg}${p.name}${desc} (${SITE.url}/equipment/${c.slug}/${p.slug})`;
+  const cats = await getCategories();
+  const equipment = (
+    await Promise.all(
+      cats.map(async (c) => {
+        const detail = await getCategoryBySlug(c.slug);
+        if (!detail) return "";
+        const subs = detail.subcategories
+          .map((sub) => {
+            const items = sub.products
+              .map((p) => {
+                const mfg = p.manufacturer ? `${p.manufacturer} ` : "";
+                const desc = p.description ? ` — ${p.description}` : "";
+                return `    - ${mfg}${p.name}${desc} (${SITE.url}/equipment/${c.slug}/${p.slug})`;
+              })
+              .join("\n");
+            return `  ${sub.name}:\n${items}`;
           })
           .join("\n");
-        return `  ${sub.name}:\n${items}`;
-      })
-      .join("\n");
-    return `### ${c.name} (${c.short}) — ${SITE.url}/equipment/${c.slug}\n${c.tagline}\n\n${c.description}\n\n${subs}`;
-  }).join("\n\n");
+        return `### ${c.name} (${c.shortLabel}) — ${SITE.url}/equipment/${c.slug}\n${c.tagline ?? ""}\n\n${c.description ?? ""}\n\n${subs}`;
+      }),
+    )
+  )
+    .filter(Boolean)
+    .join("\n\n");
 
   const applications = APP_HUB.map((hub) => {
     const app = APPLICATIONS[hub.slug];

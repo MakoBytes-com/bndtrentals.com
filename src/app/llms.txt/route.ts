@@ -1,16 +1,24 @@
 import { SITE, LOCATIONS } from "@/lib/site";
-import { CATEGORIES } from "@/lib/equipment";
+import { getCategories } from "@/lib/catalog";
 
-export const dynamic = "force-static";
+// Reads from bndt-prod, so admin catalog edits propagate to llms.txt on
+// the next request. Was force-static before; now dynamic with a 1-hour
+// CDN cache.
+export const dynamic = "force-dynamic";
 
-export function GET() {
+export async function GET() {
   const locations = LOCATIONS.map(
-    (l) => `- ${l.cityState}${l.isHq ? " (HQ)" : ""}: ${l.street}, ${l.cityState} ${l.zip} — ${l.phone}`
+    (l) =>
+      `- ${l.cityState}${l.isHq ? " (HQ)" : ""}: ${l.street}, ${l.cityState} ${l.zip} — ${l.phone}`,
   ).join("\n");
 
-  const categories = CATEGORIES.map(
-    (c) => `- ${c.short} (${c.name}): ${c.tagline} — /equipment/${c.slug}`
-  ).join("\n");
+  const cats = await getCategories();
+  const categories = cats
+    .map(
+      (c) =>
+        `- ${c.shortLabel} (${c.name}): ${c.tagline ?? c.description ?? ""} — /equipment/${c.slug}`,
+    )
+    .join("\n");
 
   const body = `# ${SITE.name}
 

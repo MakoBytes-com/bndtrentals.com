@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
-import { CATEGORIES, totalProductCount } from "@/lib/equipment";
+import { getCategories, getTotalProductCount } from "@/lib/catalog";
 import { pageMetadata } from "@/lib/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
@@ -13,6 +13,8 @@ export const metadata: Metadata = pageMetadata({
     "Industrial inspection equipment available for rent, sale, calibration, and repair from Burton NDT Rentals — NDT, RVI, PMI, X-Ray, Environmental, Accessories, and Consumables.",
   path: "/equipment",
 });
+
+export const dynamic = "force-dynamic";
 
 const PILLAR_IMAGES: Record<string, string> = {
   ndt: "ndt-img.jpg",
@@ -24,8 +26,21 @@ const PILLAR_IMAGES: Record<string, string> = {
   consumables: "Magnaflux-Products.png",
 };
 
-export default function EquipmentPage() {
-  const total = totalProductCount();
+export default async function EquipmentPage() {
+  const [categories, total] = await Promise.all([
+    getCategories(),
+    getTotalProductCount(),
+  ]);
+
+  // Per-category counts via parallel head-only queries.
+  const counts = await Promise.all(
+    categories.map(async (c) => {
+      const { getAllPublishedProducts } = await import("@/lib/catalog");
+      const all = await getAllPublishedProducts();
+      return all.filter((x) => x.category.id === c.id).length;
+    }),
+  );
+
   return (
     <>
       <PageHero
@@ -37,11 +52,10 @@ export default function EquipmentPage() {
       <section className="bg-canvas py-20 lg:py-28">
         <Container>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((c) => {
-              const productCount = c.subcategories.reduce(
-                (n, s) => n + s.products.length,
-                0
-              );
+            {categories.map((c, i) => {
+              const productCount = counts[i] ?? 0;
+              const heroImage =
+                c.hero_image ?? PILLAR_IMAGES[c.slug] ?? "ndt-img.jpg";
               return (
                 <Link
                   key={c.slug}
@@ -50,7 +64,7 @@ export default function EquipmentPage() {
                 >
                   <div className="relative aspect-[4/3] overflow-hidden bg-canvas-tint">
                     <Image
-                      src={`/images/${PILLAR_IMAGES[c.slug] ?? "ndt-img.jpg"}`}
+                      src={`/images/${heroImage}`}
                       alt={c.name}
                       width={800}
                       height={600}
@@ -62,14 +76,16 @@ export default function EquipmentPage() {
                   </div>
                   <div className="flex flex-1 flex-col p-6">
                     <p className="text-[12px] font-bold uppercase tracking-widest text-accent">
-                      {c.short}
+                      {c.shortLabel}
                     </p>
                     <h3 className="mt-2 text-2xl font-bold text-ink">{c.name}</h3>
-                    <p className="mt-3 text-[15px] text-muted leading-relaxed flex-1">
-                      {c.tagline}
-                    </p>
+                    {c.tagline && (
+                      <p className="mt-3 text-[15px] text-muted leading-relaxed flex-1">
+                        {c.tagline}
+                      </p>
+                    )}
                     <p className="mt-5 inline-flex items-center gap-1.5 text-[14px] font-semibold text-brand">
-                      Browse {c.short.toLowerCase()}
+                      Browse {c.shortLabel.toLowerCase()}
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </p>
                   </div>

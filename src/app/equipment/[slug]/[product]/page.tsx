@@ -6,20 +6,19 @@ import { headers } from "next/headers";
 import { Container } from "@/components/Container";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
-import { CATEGORIES, findProduct } from "@/lib/equipment";
+import {
+  getAllPublishedProducts,
+  getCategoryBySlug,
+  getProduct,
+} from "@/lib/catalog";
 import { SITE } from "@/lib/site";
 import { pageMetadata } from "@/lib/page-metadata";
 
-export function generateStaticParams() {
-  const params: Array<{ slug: string; product: string }> = [];
-  for (const cat of CATEGORIES) {
-    for (const sub of cat.subcategories) {
-      for (const p of sub.products) {
-        params.push({ slug: cat.slug, product: p.slug });
-      }
-    }
-  }
-  return params;
+export const dynamic = "force-dynamic";
+
+export async function generateStaticParams() {
+  const all = await getAllPublishedProducts();
+  return all.map((x) => ({ slug: x.category.slug, product: x.product.slug }));
 }
 
 export async function generateMetadata({
@@ -28,15 +27,23 @@ export async function generateMetadata({
   params: Promise<{ slug: string; product: string }>;
 }): Promise<Metadata> {
   const { slug, product } = await params;
-  const found = findProduct(slug, product);
-  if (!found) return pageMetadata({ title: "Equipment", description: "Browse equipment.", path: "/equipment" });
+  const found = await getProduct(slug, product);
+  if (!found) {
+    return pageMetadata({
+      title: "Equipment",
+      description: "Browse equipment.",
+      path: "/equipment",
+    });
+  }
   const { product: p, category } = found;
   const title = p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name;
   return pageMetadata({
     title,
-    description: p.description ?? `${p.name} — available for rent in the ${category.name} category. Rental, sale, calibration, and repair from ${SITE.name}.`,
+    description:
+      p.description ??
+      `${p.name} — available for rent in the ${category.name} category. Rental, sale, calibration, and repair from ${SITE.name}.`,
     path: `/equipment/${slug}/${product}`,
-    ogImage: `${SITE.url}/images/${p.image}`,
+    ogImage: p.image ? `${SITE.url}/images/${p.image}` : undefined,
   });
 }
 
@@ -46,24 +53,28 @@ export default async function ProductDetail({
   params: Promise<{ slug: string; product: string }>;
 }) {
   const { slug, product } = await params;
-  const found = findProduct(slug, product);
+  const found = await getProduct(slug, product);
   if (!found) notFound();
-  const { product: p, subcategory, category } = found;
+  const { product: p, category, subcategoryName } = found;
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
-  // Related products from same subcategory
-  const related = subcategory.products.filter((x) => x.slug !== p.slug).slice(0, 4);
+  // Related products from same subcategory.
+  const cat = await getCategoryBySlug(slug);
+  const related =
+    cat?.products
+      .filter((x) => x.subcategory === p.subcategory && x.slug !== p.slug)
+      .slice(0, 4) ?? [];
 
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name,
-    image: `${SITE.url}/images/${p.image}`,
+    image: p.image ? `${SITE.url}/images/${p.image}` : undefined,
     description: p.description,
     brand: p.manufacturer
       ? { "@type": "Brand", name: p.manufacturer }
       : undefined,
-    category: `${category.name} / ${subcategory.name}`,
+    category: `${category.name} / ${subcategoryName}`,
     offers: {
       "@type": "Offer",
       availability: "https://schema.org/InStock",
@@ -80,7 +91,7 @@ export default async function ProductDetail({
       {
         "@type": "ListItem",
         position: 3,
-        name: category.short,
+        name: category.shortLabel,
         item: `${SITE.url}/equipment/${category.slug}`,
       },
       {
@@ -103,7 +114,7 @@ export default async function ProductDetail({
               <li aria-hidden>/</li>
               <li><Link href="/equipment" className="hover:text-brand">Equipment</Link></li>
               <li aria-hidden>/</li>
-              <li><Link href={`/equipment/${category.slug}`} className="hover:text-brand">{category.short}</Link></li>
+              <li><Link href={`/equipment/${category.slug}`} className="hover:text-brand">{category.shortLabel}</Link></li>
               <li aria-hidden>/</li>
               <li className="text-ink font-medium">{p.name}</li>
             </ol>
@@ -118,14 +129,16 @@ export default async function ProductDetail({
             <div className="lg:col-span-6">
               <div className="overflow-hidden rounded-2xl border border-line bg-canvas-tint">
                 <div className="aspect-[4/3] flex items-center justify-center p-10">
-                  <Image
-                    src={`/images/${p.image}`}
-                    alt={p.name}
-                    width={900}
-                    height={700}
-                    priority
-                    className="max-h-full w-auto object-contain"
-                  />
+                  {p.image && (
+                    <Image
+                      src={`/images/${p.image}`}
+                      alt={p.name}
+                      width={900}
+                      height={700}
+                      priority
+                      className="max-h-full w-auto object-contain"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -133,7 +146,7 @@ export default async function ProductDetail({
             {/* Header / actions */}
             <div className="lg:col-span-6">
               <p className="text-[13px] font-bold uppercase tracking-widest text-accent">
-                {subcategory.name}
+                {subcategoryName}
               </p>
               {p.manufacturer && (
                 <p className="mt-3 text-[15px] font-semibold text-muted">{p.manufacturer}</p>
@@ -166,7 +179,7 @@ export default async function ProductDetail({
                   productSlug={p.slug}
                   categorySlug={category.slug}
                   productName={p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name}
-                  productImage={p.image}
+                  productImage={p.image ?? undefined}
                   size="lg"
                 />
                 {p.pdf && (
@@ -210,12 +223,12 @@ export default async function ProductDetail({
         <section className="border-t border-line bg-canvas-tint py-16 lg:py-20">
           <Container>
             <div className="flex items-end justify-between gap-4">
-              <h2 className="text-2xl sm:text-3xl font-bold">More in {subcategory.name}</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">More in {subcategoryName}</h2>
               <Link
                 href={`/equipment/${category.slug}`}
                 className="inline-flex items-center gap-1.5 text-[14px] font-bold text-brand hover:text-brand-dark"
               >
-                Full {category.short} catalog
+                Full {category.shortLabel} catalog
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </Link>
             </div>
@@ -227,13 +240,15 @@ export default async function ProductDetail({
                   className="group flex flex-col overflow-hidden rounded-xl bg-white ring-1 ring-line transition-all hover:ring-brand"
                 >
                   <div className="aspect-[4/3] flex items-center justify-center bg-canvas-tint p-5">
-                    <Image
-                      src={`/images/${r.image}`}
-                      alt={r.name}
-                      width={400}
-                      height={400}
-                      className="max-h-full w-auto object-contain"
-                    />
+                    {r.image && (
+                      <Image
+                        src={`/images/${r.image}`}
+                        alt={r.name}
+                        width={400}
+                        height={400}
+                        className="max-h-full w-auto object-contain"
+                      />
+                    )}
                   </div>
                   <div className="border-t border-line p-4">
                     {r.manufacturer && (
