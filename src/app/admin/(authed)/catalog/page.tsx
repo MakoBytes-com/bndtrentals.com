@@ -113,12 +113,28 @@ export default async function CatalogListPage({
             )}
           </p>
         </div>
-        <Link
-          href="/admin/catalog/new"
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-[14px] font-bold text-white hover:bg-accent-dark"
-        >
-          + New product
-        </Link>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/catalog/categories/new"
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-[14px] font-bold text-white hover:bg-brand-dark"
+            >
+              + New category
+            </Link>
+            <Link
+              href="/admin/catalog/new"
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-[14px] font-bold text-white hover:bg-accent-dark"
+            >
+              + New product
+            </Link>
+          </div>
+          <Link
+            href="/admin/catalog/categories"
+            className="text-[13px] font-semibold text-muted hover:text-brand"
+          >
+            Manage categories →
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6">
