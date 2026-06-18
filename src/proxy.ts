@@ -44,6 +44,9 @@ export function proxy(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  // Expose the path so server layouts can gate by route (e.g. the admin auth
+  // gate must allow the TOTP-setup page through while forcing enrollment).
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
   requestHeaders.set("Content-Security-Policy", csp);
 
   const response = NextResponse.next({

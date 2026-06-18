@@ -48,10 +48,9 @@ export function TotpEnrolledClient() {
           Lost your authenticator?
         </h2>
         <p className="mt-3 text-[14px] text-ink-soft">
-          Disabling here removes the requirement so you can re-enroll with a
-          new device. Anyone with your password alone could sign in until you
-          re-enable two-factor — only do this if you can re-enroll right
-          away.
+          Two-factor is required on this account, so it can&apos;t be turned
+          off — but if you switched phones you can reset it here. This clears
+          the old device and immediately walks you through enrolling a new one.
         </p>
 
         {!confirmStep ? (
@@ -60,12 +59,12 @@ export function TotpEnrolledClient() {
             onClick={() => setConfirmStep(true)}
             className="mt-5 rounded-full border border-line bg-white px-5 py-2.5 text-[13.5px] font-bold text-ink hover:bg-canvas-tint"
           >
-            Disable two-factor
+            Reset authenticator
           </button>
         ) : (
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <span className="text-[13.5px] font-semibold text-accent">
-              Sure? This removes your TOTP requirement.
+              This removes your current device — you&apos;ll set up a new one right after.
             </span>
             <button
               type="button"
@@ -73,7 +72,7 @@ export function TotpEnrolledClient() {
               disabled={pending}
               className="rounded-full bg-accent px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-accent-dark disabled:opacity-60"
             >
-              {pending ? "Disabling…" : "Yes, disable"}
+              {pending ? "Resetting…" : "Yes, reset"}
             </button>
             <button
               type="button"

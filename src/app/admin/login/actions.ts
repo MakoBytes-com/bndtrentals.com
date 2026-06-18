@@ -112,10 +112,14 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
     .eq("id", user.id);
   await recordLoginAttempt({ email, ip, userAgent, success: true });
 
-  return {
-    ok: true,
-    redirectTo: user.must_change_password ? "/admin/account/change-password" : "/admin",
-  };
+  // Redirect priority: change password → enroll mandatory 2FA → dashboard.
+  const redirectTo = user.must_change_password
+    ? "/admin/account/change-password"
+    : !user.totp_enrolled
+      ? "/admin/account/totp-setup"
+      : "/admin";
+
+  return { ok: true, redirectTo };
 }
 
 export async function loginAndRedirect(input: LoginInput) {
