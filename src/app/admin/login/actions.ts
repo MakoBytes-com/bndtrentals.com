@@ -11,11 +11,13 @@ import {
   recordLoginAttempt,
 } from "@/lib/auth/rate-limit";
 import { verifyTotpCode } from "@/lib/auth/totp";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const loginSchema = z.object({
   email: z.string().trim().email().max(254),
   password: z.string().min(1).max(200),
   totp: z.string().trim().max(10).optional().or(z.literal("")),
+  turnstileToken: z.string().max(2048).optional().or(z.literal("")),
 });
 
 export type LoginInput = z.input<typeof loginSchema>;
@@ -29,7 +31,7 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
   if (!parsed.success) {
     return { ok: false, error: "Email or password format is invalid." };
   }
-  const { email, password, totp } = parsed.data;
+  const { email, password, totp, turnstileToken } = parsed.data;
 
   const hdrs = await headers();
   const ip =
@@ -47,6 +49,15 @@ export async function loginAction(input: LoginInput): Promise<LoginResult> {
       error:
         "Too many sign-in attempts. Wait 15 minutes and try again, or call support.",
     };
+  }
+
+  // Bot check (Turnstile) before any DB work. Skips the TOTP re-prompt round
+  // trip — the client sends a fresh token each submit. Fails open only if
+  // TURNSTILE_SECRET_KEY is unset (dev); enforces in production.
+  const captcha = await verifyTurnstile(turnstileToken || null, ip);
+  if (!captcha.ok) {
+    await recordLoginAttempt({ email, ip, userAgent, success: false, reason: `captcha_${captcha.reason}` });
+    return { ok: false, error: "Couldn't verify you're human. Please try again." };
   }
 
   const supa = getAdminSupabase();

@@ -3,7 +3,7 @@ import "server-only";
 // Cloudflare Turnstile server-side verification.
 // Phase 4 wires a real site key + secret key into Vercel env vars; until then
 // this verifier fails OPEN (allows the request) so Phase 2 can ship the
-// server action without bothering Russell for Cloudflare credentials yet.
+// server action without Cloudflare credentials configured yet.
 //
 // Once TURNSTILE_SECRET_KEY is set, the verifier flips to enforce mode and
 // rejects requests with missing or invalid tokens.

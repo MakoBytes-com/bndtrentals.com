@@ -33,8 +33,8 @@ export default async function AdminLoginPage() {
         </div>
         <p className="mt-6 text-center text-[12px] text-white/55">
           Need access? Email{" "}
-          <a href="mailto:rsailors@makologics.com" className="text-white/85 hover:text-white">
-            rsailors@makologics.com
+          <a href="mailto:support@makologics.com" className="text-white/85 hover:text-white">
+            support@makologics.com
           </a>
           .
         </p>

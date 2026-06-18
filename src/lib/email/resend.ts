@@ -7,7 +7,7 @@ import { Resend } from "resend";
 // and callers should treat that as "email skipped, log only."
 //
 // Phase 4 will set RESEND_FROM to "Burton NDT Rentals <quotes@bndtrentals.com>"
-// once the bndtrentals.com domain is verified in Russell's Resend account.
+// once the bndtrentals.com domain is verified in the Resend account.
 // Until then, RESEND_FROM should point at an already-verified domain (e.g.
 // quotes@makoai.studio) so internal notification emails actually deliver.
 

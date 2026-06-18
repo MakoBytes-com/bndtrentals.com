@@ -3,12 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "./actions";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [needsTotp, setNeedsTotp] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // Bumped after every failed attempt to remount the widget — Turnstile tokens
+  // are single-use, so a retry needs a fresh one.
+  const [captchaKey, setCaptchaKey] = useState(0);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -18,6 +23,7 @@ export function LoginForm() {
       email: String(fd.get("email") ?? "").trim(),
       password: String(fd.get("password") ?? ""),
       totp: String(fd.get("totp") ?? "").trim(),
+      turnstileToken: captchaToken ?? "",
     };
     startTransition(async () => {
       const result = await loginAction(payload);
@@ -28,6 +34,9 @@ export function LoginForm() {
       }
       setError(result.error);
       if (result.needsTotp) setNeedsTotp(true);
+      // Consumed/failed token — force a fresh challenge for the next submit.
+      setCaptchaToken(null);
+      setCaptchaKey((k) => k + 1);
     });
   }
 
@@ -88,6 +97,12 @@ export function LoginForm() {
           {error}
         </p>
       )}
+
+      <TurnstileWidget
+        key={captchaKey}
+        onToken={setCaptchaToken}
+        className="flex justify-center"
+      />
 
       <button
         type="submit"
