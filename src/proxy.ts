@@ -18,10 +18,11 @@ export function proxy(request: NextRequest) {
     // additional scripts, but the initial loader URL still needs to be
     // listed explicitly when next/script doesn't get to nonce it.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
-    // 'unsafe-inline' is ignored by browsers when a nonce is present (CSP3) —
-    // we keep it ONLY in dev because Next dev injects unhashed inline styles
-    // for HMR. Production gets nonce-only.
-    `style-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-inline'" : ""}`,
+    // Inline style ATTRIBUTES (style={{...}}) cannot carry a nonce, and a nonce
+    // in style-src makes CSP3 browsers ignore 'unsafe-inline'. React and Recharts
+    // (admin analytics) emit inline styles, so style-src uses 'unsafe-inline' and
+    // drops the nonce. Style injection is low-severity; script-src stays strict.
+    "style-src 'self' 'unsafe-inline'",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: https: blob:",
     "media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
@@ -48,15 +49,10 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
-  // Report-Only for the initial production rollout. The request header above is
-  // kept as the real "Content-Security-Policy" so Next still applies the nonce to
-  // its own scripts, but the *response* is Report-Only — the policy is observed
-  // without blocking anything. Flip this to "Content-Security-Policy" (enforcing)
-  // after a Puppeteer console audit confirms no legitimate resource is refused.
-  // Known tuning needed before enforce: Recharts on /admin analytics emits inline
-  // style attributes that a nonce-only style-src blocks, so style-src must allow
-  // 'unsafe-inline' (or hashes) first.
-  response.headers.set("Content-Security-Policy-Report-Only", csp);
+  // Enforcing. script-src is strict (nonce + 'strict-dynamic'); style-src allows
+  // 'unsafe-inline' so React/Recharts inline styles render. The request header
+  // above carries the same policy so Next nonces its own scripts.
+  response.headers.set("Content-Security-Policy", csp);
 
   return response;
 }
