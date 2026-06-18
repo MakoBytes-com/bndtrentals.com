@@ -127,6 +127,67 @@ export async function uploadProductPdf(formData: FormData): Promise<
   return { ok: true, filename: path };
 }
 
+const IMAGE_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+
+export async function uploadProductImage(formData: FormData): Promise<
+  | { ok: true; image: string }
+  | { ok: false; error: string }
+> {
+  const session = await getAdminSession();
+  if (!session.userId) return { ok: false, error: "Not signed in." };
+
+  const file = formData.get("file");
+  const productId = String(formData.get("productId") ?? "");
+  if (!(file instanceof File)) return { ok: false, error: "No file selected." };
+  if (!productId) return { ok: false, error: "Missing product id." };
+
+  const ext = IMAGE_TYPES[file.type];
+  if (!ext) {
+    return { ok: false, error: "Use a JPEG, PNG, WebP, or AVIF image." };
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return { ok: false, error: "Image is over 10 MB. Please resize it." };
+  }
+
+  const safeBase = file.name
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .slice(0, 80) || "image";
+  // Path inside the catalog-images bucket. The DB stores it prefixed with
+  // "uploads/" so /images/uploads/... resolves via the next.config rewrite.
+  const objectPath = `${productId}/${safeBase}-${Date.now()}.${ext}`;
+
+  const supa = getAdminSupabase();
+  const arrayBuffer = await file.arrayBuffer();
+  const { error: uploadErr } = await supa.storage
+    .from("catalog-images")
+    .upload(objectPath, arrayBuffer, {
+      contentType: file.type,
+      cacheControl: "public, max-age=31536000, immutable",
+      upsert: false,
+    });
+  if (uploadErr) {
+    return { ok: false, error: `Upload failed: ${uploadErr.message}` };
+  }
+
+  const image = `uploads/${objectPath}`;
+  const { error: updErr } = await supa
+    .from("catalog_products")
+    .update({ image })
+    .eq("id", productId);
+  if (updErr) {
+    return { ok: false, error: `Saved upload but couldn't link product: ${updErr.message}` };
+  }
+
+  revalidatePath(`/admin/catalog/${productId}`);
+  return { ok: true, image };
+}
+
 export async function deleteProduct(productId: string) {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false as const, error: "Not signed in." };

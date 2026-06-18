@@ -25,6 +25,22 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  async rewrites() {
+    // Admin-uploaded product images live in the Supabase Storage bucket
+    // "catalog-images". Serving them under the existing /images/ path (via this
+    // rewrite) means every existing `/images/${product.image}` render — public
+    // pages, cart, OG tags, JSON-LD — keeps working unchanged; the stored value
+    // is just `uploads/<productId>/<file>`. Legacy bundled images in
+    // /public/images/ still win for any non-uploads/* path.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) return [];
+    return [
+      {
+        source: "/images/uploads/:path*",
+        destination: `${supabaseUrl}/storage/v1/object/public/catalog-images/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

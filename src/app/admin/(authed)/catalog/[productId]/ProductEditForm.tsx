@@ -5,8 +5,18 @@ import { useRouter } from "next/navigation";
 import {
   updateProduct,
   uploadProductPdf,
+  uploadProductImage,
   deleteProduct,
 } from "./actions";
+
+// Resolve a stored image value to a renderable src: uploaded images are stored
+// as "uploads/..." (served via the /images rewrite); legacy values are bare
+// filenames under /public/images/.
+function imageSrc(image: string): string | null {
+  if (!image) return null;
+  if (image.startsWith("http")) return image;
+  return `/images/${image}`;
+}
 
 type Initial = {
   id: string;
@@ -40,6 +50,10 @@ export function ProductEditForm({
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -80,6 +94,29 @@ export function ProductEditForm({
       if (result.ok) setSavedAt(new Date());
       else setError(result.error);
     });
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    setImageError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("productId", form.id);
+      const result = await uploadProductImage(fd);
+      if (result.ok) {
+        setForm((f) => ({ ...f, image: result.image }));
+      } else {
+        setImageError(result.error);
+      }
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
   }
 
   async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -183,17 +220,59 @@ export function ProductEditForm({
           Image & PDF
         </h2>
 
-        <Field label="Image filename" className="mt-4">
+        <Field label="Product image" className="mt-4">
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-canvas-tint">
+              {imageSrc(form.image) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageSrc(form.image) as string}
+                  alt="Current product"
+                  className="size-full object-contain"
+                />
+              ) : (
+                <span className="px-2 text-center text-[11px] text-muted-soft">
+                  No image
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <label
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-[13.5px] font-bold text-white ${
+                  uploadingImage ? "bg-brand/60" : "bg-brand hover:bg-brand-dark"
+                }`}
+              >
+                {uploadingImage ? "Uploading…" : "Upload image"}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+              </label>
+              <p className="mt-2 text-[12px] text-muted-soft">
+                JPEG, PNG, WebP, or AVIF · max 10 MB. Replaces the current image
+                and goes live after you click Save.
+              </p>
+              {imageError && (
+                <p role="alert" className="mt-2 text-[12.5px] font-semibold text-accent">
+                  {imageError}
+                </p>
+              )}
+            </div>
+          </div>
           <input
             type="text"
             value={form.image}
             onChange={(e) => setForm({ ...form, image: e.target.value })}
-            className={inputClass}
+            className={`${inputClass} mt-3`}
             placeholder="olympus-38DL.jpg"
           />
           <p className="mt-1 text-[12px] text-muted-soft">
-            Filename relative to <code className="font-mono">/public/images/</code>{" "}
-            for now. Upload UI ships in a follow-up.
+            Advanced: the stored image reference. Uploading fills this in
+            automatically — you usually won&apos;t edit it by hand.
           </p>
         </Field>
 
