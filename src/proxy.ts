@@ -48,7 +48,15 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
-  response.headers.set("Content-Security-Policy", csp);
+  // Report-Only for the initial production rollout. The request header above is
+  // kept as the real "Content-Security-Policy" so Next still applies the nonce to
+  // its own scripts, but the *response* is Report-Only — the policy is observed
+  // without blocking anything. Flip this to "Content-Security-Policy" (enforcing)
+  // after a Puppeteer console audit confirms no legitimate resource is refused.
+  // Known tuning needed before enforce: Recharts on /admin analytics emits inline
+  // style attributes that a nonce-only style-src blocks, so style-src must allow
+  // 'unsafe-inline' (or hashes) first.
+  response.headers.set("Content-Security-Policy-Report-Only", csp);
 
   return response;
 }
