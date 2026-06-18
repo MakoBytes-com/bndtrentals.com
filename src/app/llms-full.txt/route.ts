@@ -1,5 +1,6 @@
 import { SITE, LOCATIONS } from "@/lib/site";
 import { getCategories, getCategoryBySlug } from "@/lib/catalog";
+import { productDisplayName } from "@/lib/product-name";
 import { APPLICATIONS, APP_HUB } from "@/lib/applications";
 import { PROJECTS } from "@/lib/projects";
 
@@ -26,9 +27,8 @@ export async function GET() {
           .map((sub) => {
             const items = sub.products
               .map((p) => {
-                const mfg = p.manufacturer ? `${p.manufacturer} ` : "";
                 const desc = p.description ? ` — ${p.description}` : "";
-                return `    - ${mfg}${p.name}${desc} (${SITE.url}/equipment/${c.slug}/${p.slug})`;
+                return `    - ${productDisplayName(p.manufacturer, p.name)}${desc} (${SITE.url}/equipment/${c.slug}/${p.slug})`;
               })
               .join("\n");
             return `  ${sub.name}:\n${items}`;

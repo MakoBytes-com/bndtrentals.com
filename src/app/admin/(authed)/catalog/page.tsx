@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { productDisplayName } from "@/lib/product-name";
 
 export const metadata: Metadata = {
   title: "Catalog",
@@ -229,8 +230,7 @@ export default async function CatalogListPage({
                         href={`/admin/catalog/${p.id}`}
                         className="block font-semibold text-ink hover:text-brand"
                       >
-                        {p.manufacturer ? `${p.manufacturer} ` : ""}
-                        {p.name}
+                        {productDisplayName(p.manufacturer, p.name)}
                       </Link>
                       <p className="text-[12.5px] text-muted-soft">
                         {p.slug}

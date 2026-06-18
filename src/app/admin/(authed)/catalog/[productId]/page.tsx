@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { ProductEditForm } from "./ProductEditForm";
 import type { CatalogCategory, CatalogProduct } from "@/lib/supabase/types";
+import { productDisplayName } from "@/lib/product-name";
 
 export const metadata: Metadata = {
   title: "Edit product",
@@ -54,8 +55,7 @@ export default async function ProductEditPage({
           {typedCategory ? `${typedCategory.name} · ${typedProduct.subcategory ?? "—"}` : "Catalog"}
         </p>
         <h1 className="mt-2 text-2xl sm:text-3xl font-bold">
-          {typedProduct.manufacturer ? `${typedProduct.manufacturer} ` : ""}
-          {typedProduct.name}
+          {productDisplayName(typedProduct.manufacturer, typedProduct.name)}
         </h1>
         <p className="mt-1 text-[12.5px] text-muted-soft">
           slug: <code className="font-mono">{typedProduct.slug}</code>

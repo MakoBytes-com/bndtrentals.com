@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { Container } from "@/components/Container";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
+import { productDisplayName } from "@/lib/product-name";
 import {
   getAllPublishedProducts,
   getCategoryBySlug,
@@ -36,7 +37,7 @@ export async function generateMetadata({
     });
   }
   const { product: p, category } = found;
-  const title = p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name;
+  const title = productDisplayName(p.manufacturer, p.name);
   return pageMetadata({
     title,
     description:
@@ -68,7 +69,7 @@ export default async function ProductDetail({
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name,
+    name: productDisplayName(p.manufacturer, p.name),
     image: p.image ? `${SITE.url}/images/${p.image}` : undefined,
     description: p.description,
     brand: p.manufacturer
@@ -178,7 +179,7 @@ export default async function ProductDetail({
                 <AddToQuoteButton
                   productSlug={p.slug}
                   categorySlug={category.slug}
-                  productName={p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name}
+                  productName={productDisplayName(p.manufacturer, p.name)}
                   productImage={p.image ?? undefined}
                   size="lg"
                 />

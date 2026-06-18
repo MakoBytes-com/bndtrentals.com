@@ -8,6 +8,7 @@ import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
 import { getCategories, getCategoryBySlug } from "@/lib/catalog";
 import { pageMetadata } from "@/lib/page-metadata";
+import { productDisplayName } from "@/lib/product-name";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,7 @@ export default async function EquipmentCategoryPage({
                       <AddToQuoteButton
                         productSlug={p.slug}
                         categorySlug={cat.slug}
-                        productName={p.manufacturer ? `${p.manufacturer} ${p.name}` : p.name}
+                        productName={productDisplayName(p.manufacturer, p.name)}
                         productImage={p.image ?? undefined}
                         size="sm"
                       />
