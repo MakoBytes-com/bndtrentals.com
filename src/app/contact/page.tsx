@@ -7,6 +7,7 @@ import { LOCATIONS, SITE } from "@/lib/site";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { Editable } from "@/components/cms/Editable";
 import { EditBar } from "@/components/cms/EditBar";
+import { ContactForm } from "./ContactForm";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,21 @@ export default async function ContactPage({
         title={c.hero_title ?? "Three hubs. One number. Real techs."}
         description={c.hero_description ?? "Get in touch for equipment availability, custom quotes, calibration scheduling, or technical questions about an inspection job. Pick the closest hub or call HQ — we route on the back end."}
       />
+
+      {/* CONTACT FORM */}
+      <section className="bg-canvas py-16 lg:py-20">
+        <Container size="narrow">
+          <Editable as="span" className="eyebrow" page="contact" k="form_eyebrow" editable={edit}
+            value={c.form_eyebrow ?? "Send a message"} />
+          <Editable as="h2" className="mt-2 text-3xl sm:text-4xl font-bold" page="contact" k="form_title" editable={edit}
+            value={c.form_title ?? "Tell us what you need."} />
+          <Editable as="p" className="mt-3 text-[17px] text-muted-soft" page="contact" k="form_intro" editable={edit}
+            value={c.form_intro ?? "Fill out the form and a Burton NDT rep will get back to you within one business hour. Prefer to talk? Call or email using the options below."} />
+          <div className="mt-8">
+            <ContactForm />
+          </div>
+        </Container>
+      </section>
 
       {/* QUICK CONTACT */}
       <section className="bg-canvas py-16 lg:py-20">
