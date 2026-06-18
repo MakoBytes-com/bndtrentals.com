@@ -6,6 +6,10 @@ import { CtaBanner } from "@/components/CtaBanner";
 import { SITE, LOCATIONS } from "@/lib/site";
 import { LOCATION_CONTENT, locationContentBySlug } from "@/lib/location-content";
 import { pageMetadata } from "@/lib/page-metadata";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Service Hubs",
@@ -13,13 +17,21 @@ export const metadata: Metadata = pageMetadata({
   path: "/locations",
 });
 
-export default function LocationsHubPage() {
+export default async function LocationsHubPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("locations"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/locations" label="Locations" />}
       <PageHero
-        eyebrow="Service hubs"
-        title="Three hubs. One fleet."
-        description={`We run ${LOCATIONS.length} regional warehouses so the gear you need is closer than a Houston-only operation could keep it. Pick the hub closest to your project.`}
+        cms={{ page: "locations", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Service hubs"}
+        title={c.hero_title ?? "Three hubs. One fleet."}
+        description={c.hero_description ?? `We run ${LOCATIONS.length} regional warehouses so the gear you need is closer than a Houston-only operation could keep it. Pick the hub closest to your project.`}
       />
 
       <section className="bg-canvas py-16 lg:py-20">
@@ -81,7 +93,7 @@ export default function LocationsHubPage() {
         </Container>
       </section>
 
-      <CtaBanner />
+      <CtaBanner cms={{ page: "locations", editable: edit }} />
     </>
   );
 }

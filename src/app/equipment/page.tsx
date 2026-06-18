@@ -10,6 +10,8 @@ import {
   getTotalProductCount,
 } from "@/lib/catalog";
 import { pageMetadata } from "@/lib/page-metadata";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
 
 export const metadata: Metadata = pageMetadata({
   title: "Equipment Catalog",
@@ -30,11 +32,18 @@ const PILLAR_IMAGES: Record<string, string> = {
   consumables: "Magnaflux-Products.png",
 };
 
-export default async function EquipmentPage() {
-  const [categories, total, allProducts] = await Promise.all([
+export default async function EquipmentPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [categories, total, allProducts, content, edit] = await Promise.all([
     getCategories(),
     getTotalProductCount(),
     getAllPublishedProducts(),
+    getPageContent("equipment"),
+    getEditMode(sp),
   ]);
 
   // Build a single category_id → product count map and look up per render.
@@ -45,10 +54,12 @@ export default async function EquipmentPage() {
 
   return (
     <>
+      {edit && <EditBar path="/equipment" label="Equipment" />}
       <PageHero
-        eyebrow="Equipment catalog"
-        title="The full fleet — calibrated, in stock, ready to ship."
-        description={`${total}+ equipment models across NDT, RVI, PMI, X-Ray, environmental monitoring, accessories, and consumables. From Olympus and Eddyfi to Magnaflux and SciAps.`}
+        cms={{ page: "equipment", editable: edit }}
+        eyebrow={content.hero_eyebrow ?? "Equipment catalog"}
+        title={content.hero_title ?? "The full fleet — calibrated, in stock, ready to ship."}
+        description={content.hero_description ?? `${total}+ equipment models across NDT, RVI, PMI, X-Ray, environmental monitoring, accessories, and consumables. From Olympus and Eddyfi to Magnaflux and SciAps.`}
       />
 
       <section className="bg-canvas py-20 lg:py-28">
@@ -98,7 +109,7 @@ export default async function EquipmentPage() {
         </Container>
       </section>
 
-      <CtaBanner />
+      <CtaBanner cms={{ page: "equipment", editable: edit }} />
     </>
   );
 }

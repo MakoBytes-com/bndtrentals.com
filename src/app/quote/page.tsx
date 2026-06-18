@@ -4,6 +4,10 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { QuoteForm } from "./QuoteForm";
 import { SITE, LOCATIONS } from "@/lib/site";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Request a Quote",
@@ -12,13 +16,21 @@ export const metadata: Metadata = pageMetadata({
   path: "/quote",
 });
 
-export default function QuotePage() {
+export default async function QuotePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("quote"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/quote" label="Request a Quote" />}
       <PageHero
-        eyebrow="Quote / Reservation"
-        title="Tell us what you need."
-        description="Fill out as much as you can. The faster we know your dates and item, the faster we can confirm availability — usually within the business hour."
+        cms={{ page: "quote", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Quote / Reservation"}
+        title={c.hero_title ?? "Tell us what you need."}
+        description={c.hero_description ?? "Fill out as much as you can. The faster we know your dates and item, the faster we can confirm availability — usually within the business hour."}
       />
 
       <section className="bg-canvas py-16 lg:py-20">

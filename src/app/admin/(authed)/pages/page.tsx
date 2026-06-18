@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { CMS_PAGES } from "@/lib/cms";
 
@@ -31,12 +30,14 @@ export default function AdminPagesList() {
               >
                 View
               </a>
-              <Link
+              <a
                 href={`${p.path}?edit=1`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-full bg-brand px-5 py-2 text-[13px] font-bold text-white hover:bg-brand-dark"
               >
-                Edit visually
-              </Link>
+                Edit visually ↗
+              </a>
             </div>
           </li>
         ))}

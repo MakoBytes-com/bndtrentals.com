@@ -7,6 +7,8 @@ import { AddToQuoteButton } from "@/components/AddToQuoteButton";
 import { getCategories, getCategoryBySlug } from "@/lib/catalog";
 import { SITE } from "@/lib/site";
 import { pageMetadata } from "@/lib/page-metadata";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +41,14 @@ const STEPS = [
   },
 ];
 
-export default async function CalibrationPage() {
+export default async function CalibrationPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const categories = await getCategories();
+  const [content, edit] = await Promise.all([getPageContent("calibration"), getEditMode(sp)]);
   const categoriesWithSubs = await Promise.all(
     categories.map(async (c) => {
       const detail = await getCategoryBySlug(c.slug);
@@ -52,10 +60,12 @@ export default async function CalibrationPage() {
   );
   return (
     <>
+      {edit && <EditBar path="/calibration" label="Calibration" />}
       <PageHero
-        eyebrow="Calibration & Repair"
-        title="In-house calibration. Real certificates. Fast turnaround."
-        description="Send us your equipment and we'll bench-test, calibrate, and certify it — across our full rental fleet's worth of inspection categories."
+        cms={{ page: "calibration", editable: edit }}
+        eyebrow={content.hero_eyebrow ?? "Calibration & Repair"}
+        title={content.hero_title ?? "In-house calibration. Real certificates. Fast turnaround."}
+        description={content.hero_description ?? "Send us your equipment and we'll bench-test, calibrate, and certify it — across our full rental fleet's worth of inspection categories."}
       />
 
       {/* CALIBRATION PRICE LIST */}
@@ -176,9 +186,10 @@ export default async function CalibrationPage() {
       </section>
 
       <CtaBanner
-        eyebrow="Calibration paperwork due?"
-        title="Get your unit on the bench this week."
-        body="Drop your model number and required standard in the form, and we'll send back a turn-around date within the business day."
+        cms={{ page: "calibration", editable: edit }}
+        eyebrow={content.cta_eyebrow ?? "Calibration paperwork due?"}
+        title={content.cta_title ?? "Get your unit on the bench this week."}
+        body={content.cta_body ?? "Drop your model number and required standard in the form, and we'll send back a turn-around date within the business day."}
       />
     </>
   );

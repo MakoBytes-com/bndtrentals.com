@@ -5,6 +5,11 @@ import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { TEAM } from "@/lib/team";
 import { SITE } from "@/lib/site";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { Editable } from "@/components/cms/Editable";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "About Us",
@@ -45,13 +50,24 @@ const SERVICES = [
   { label: "Industrial X-Ray Radiography", href: "/equipment/x-ray" },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("about"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/about" label="About" />}
       <PageHero
-        eyebrow="Who we are"
-        title="Industrial inspection equipment, run by people who've done the field work."
-        description={`Burton NDT Rentals — a trusted brand since ${SITE.brandSince}, operated as Burton NDT LLC since ${SITE.llcFounded} by founder Mark Burton. ${SITE.yearsInBusiness}+ years of inspection-industry experience behind every rental, sale, calibration, and repair we ship.`}
+        cms={{ page: "about", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Who we are"}
+        title={c.hero_title ?? "Industrial inspection equipment, run by people who've done the field work."}
+        description={
+          c.hero_description ??
+          `Burton NDT Rentals — a trusted brand since ${SITE.brandSince}, operated as Burton NDT LLC since ${SITE.llcFounded} by founder Mark Burton. ${SITE.yearsInBusiness}+ years of inspection-industry experience behind every rental, sale, calibration, and repair we ship.`
+        }
       />
 
       {/* STORY */}
@@ -59,31 +75,18 @@ export default function AboutPage() {
         <Container>
           <div className="grid gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <span className="eyebrow">Our story</span>
-              <h2 className="mt-2 text-3xl sm:text-4xl lg:text-[40px] leading-[1.1] font-bold">
-                {SITE.yearsInBusiness}+ years and counting in industrial inspection.
-              </h2>
+              <Editable as="span" className="eyebrow" page="about" k="story_eyebrow" editable={edit}
+                value={c.story_eyebrow ?? "Our story"} />
+              <Editable as="h2" className="mt-2 text-3xl sm:text-4xl lg:text-[40px] leading-[1.1] font-bold"
+                page="about" k="story_title" editable={edit}
+                value={c.story_title ?? `${SITE.yearsInBusiness}+ years and counting in industrial inspection.`} />
               <div className="mt-6 space-y-5 text-[17px] leading-relaxed text-ink-soft">
-                <p>
-                  Burton NDT Rentals is a professional equipment rental and sales company
-                  specializing in industrial inspection solutions. With over {SITE.yearsInBusiness} years
-                  of inspection-industry experience and the newest inventory in the field, we help
-                  industry partners maintain smooth operations, ensure workplace safety, and protect
-                  equipment reliability and integrity.
-                </p>
-                <p>
-                  Based out of La Porte, Texas, Burton NDT Rentals serves diverse clients across
-                  oil &amp; gas, pipelines, pharmaceutical facilities, chemical plants, and power
-                  generation. We deliver unparalleled equipment solutions and inspection expertise
-                  in NDT, RVI, GPR, PMI, and X-Ray fluorescence.
-                </p>
-                <p>
-                  We carry portable, easy-to-use RVI equipment — videoscopes, fiberscopes, pipe
-                  cameras, and video crawler systems in a range of diameters and lengths — alongside
-                  eddy-current testing, phased-array ultrasonics, ultrasonic flaw detection, infrared
-                  imaging, and hardness testers. Whatever the turnaround, shutdown, or emergency
-                  outage demands, we have the calibrated tool ready to ship.
-                </p>
+                <Editable as="p" page="about" k="story_p1" editable={edit}
+                  value={c.story_p1 ?? `Burton NDT Rentals is a professional equipment rental and sales company specializing in industrial inspection solutions. With over ${SITE.yearsInBusiness} years of inspection-industry experience and the newest inventory in the field, we help industry partners maintain smooth operations, ensure workplace safety, and protect equipment reliability and integrity.`} />
+                <Editable as="p" page="about" k="story_p2" editable={edit}
+                  value={c.story_p2 ?? "Based out of La Porte, Texas, Burton NDT Rentals serves diverse clients across oil & gas, pipelines, pharmaceutical facilities, chemical plants, and power generation. We deliver unparalleled equipment solutions and inspection expertise in NDT, RVI, GPR, PMI, and X-Ray fluorescence."} />
+                <Editable as="p" page="about" k="story_p3" editable={edit}
+                  value={c.story_p3 ?? "We carry portable, easy-to-use RVI equipment — videoscopes, fiberscopes, pipe cameras, and video crawler systems in a range of diameters and lengths — alongside eddy-current testing, phased-array ultrasonics, ultrasonic flaw detection, infrared imaging, and hardness testers. Whatever the turnaround, shutdown, or emergency outage demands, we have the calibrated tool ready to ship."} />
               </div>
             </div>
 
@@ -111,10 +114,11 @@ export default function AboutPage() {
       <section className="bg-canvas-tint py-20 lg:py-28">
         <Container>
           <div className="text-center max-w-2xl mx-auto">
-            <span className="eyebrow">Why choose Burton NDT</span>
-            <h2 className="mt-2 text-3xl sm:text-4xl lg:text-[40px] leading-[1.1] font-bold">
-              The principles that earn us repeat work.
-            </h2>
+            <Editable as="span" className="eyebrow" page="about" k="values_eyebrow" editable={edit}
+              value={c.values_eyebrow ?? "Why choose Burton NDT"} />
+            <Editable as="h2" className="mt-2 text-3xl sm:text-4xl lg:text-[40px] leading-[1.1] font-bold"
+              page="about" k="values_title" editable={edit}
+              value={c.values_title ?? "The principles that earn us repeat work."} />
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {VALUES.map((v, i) => (
@@ -133,8 +137,10 @@ export default function AboutPage() {
         <Container>
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <span className="eyebrow">In the press</span>
-              <h2 className="mt-2 text-3xl sm:text-4xl font-bold">BIC Magazine articles</h2>
+              <Editable as="span" className="eyebrow" page="about" k="press_eyebrow" editable={edit}
+                value={c.press_eyebrow ?? "In the press"} />
+              <Editable as="h2" className="mt-2 text-3xl sm:text-4xl font-bold" page="about" k="press_title" editable={edit}
+                value={c.press_title ?? "BIC Magazine articles"} />
               <p className="mt-4 text-[16px] text-muted-soft leading-relaxed">
                 Burton NDT featured in <em>BIC Magazine</em>, the Gulf Coast industrial publication
                 serving the petrochem, refining, and pipeline sectors.
@@ -173,15 +179,13 @@ export default function AboutPage() {
       <section className="bg-canvas py-20 lg:py-28">
         <Container>
           <div className="max-w-2xl">
-            <span className="eyebrow">Leadership</span>
-            <h2 className="mt-2 text-3xl sm:text-4xl lg:text-[40px] leading-[1.1] font-bold">
-              The team behind every shipment.
-            </h2>
-            <p className="mt-4 text-lg text-muted-soft">
-              Burton NDT is led by inspection-industry veterans with combined experience spanning
-              military operations, Fortune 500 industrial sales, and decades of field-deployed
-              testing.
-            </p>
+            <Editable as="span" className="eyebrow" page="about" k="team_eyebrow" editable={edit}
+              value={c.team_eyebrow ?? "Leadership"} />
+            <Editable as="h2" className="mt-2 text-3xl sm:text-4xl lg:text-[40px] leading-[1.1] font-bold"
+              page="about" k="team_title" editable={edit}
+              value={c.team_title ?? "The team behind every shipment."} />
+            <Editable as="p" className="mt-4 text-lg text-muted-soft" page="about" k="team_intro" editable={edit}
+              value={c.team_intro ?? "Burton NDT is led by inspection-industry veterans with combined experience spanning military operations, Fortune 500 industrial sales, and decades of field-deployed testing."} />
           </div>
 
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
@@ -212,9 +216,10 @@ export default function AboutPage() {
       </section>
 
       <CtaBanner
-        eyebrow="Ready to work together?"
-        title="Let's get the right tool on your job site."
-        body="Tell us what you're inspecting and we'll match you to the right equipment, handle the calibration paperwork, and ship it before the shift change."
+        cms={{ page: "about", editable: edit }}
+        eyebrow={c.cta_eyebrow ?? "Ready to work together?"}
+        title={c.cta_title ?? "Let's get the right tool on your job site."}
+        body={c.cta_body ?? "Tell us what you're inspecting and we'll match you to the right equipment, handle the calibration paperwork, and ship it before the shift change."}
       />
     </>
   );

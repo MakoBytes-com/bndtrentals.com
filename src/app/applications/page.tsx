@@ -6,6 +6,10 @@ import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { APP_HUB } from "@/lib/applications";
 import { pageMetadata } from "@/lib/page-metadata";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Applications",
@@ -14,13 +18,21 @@ export const metadata: Metadata = pageMetadata({
   path: "/applications",
 });
 
-export default function ApplicationsHub() {
+export default async function ApplicationsHub({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("applications"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/applications" label="Applications" />}
       <PageHero
-        eyebrow="Inspection methodologies"
-        title="Pick the right technique. Then pick the right tool."
-        description="A short primer on the three inspection disciplines we cover — what each method detects, where it shines, and which equipment we rent for it."
+        cms={{ page: "applications", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Inspection methodologies"}
+        title={c.hero_title ?? "Pick the right technique. Then pick the right tool."}
+        description={c.hero_description ?? "A short primer on the three inspection disciplines we cover — what each method detects, where it shines, and which equipment we rent for it."}
       />
 
       <section className="bg-canvas py-20 lg:py-28">
@@ -61,9 +73,10 @@ export default function ApplicationsHub() {
       </section>
 
       <CtaBanner
-        eyebrow="Not sure which method fits?"
-        title="Tell us what you're inspecting and we'll match the technique."
-        body="Our techs have specified inspection equipment for refineries, pipelines, chemical plants, and turbines. Drop us a line and we'll talk through it."
+        cms={{ page: "applications", editable: edit }}
+        eyebrow={c.cta_eyebrow ?? "Not sure which method fits?"}
+        title={c.cta_title ?? "Tell us what you're inspecting and we'll match the technique."}
+        body={c.cta_body ?? "Our techs have specified inspection equipment for refineries, pipelines, chemical plants, and turbines. Drop us a line and we'll talk through it."}
       />
     </>
   );

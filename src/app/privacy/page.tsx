@@ -4,6 +4,10 @@ import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { SITE } from "@/lib/site";
 import { pageMetadata } from "@/lib/page-metadata";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
@@ -78,13 +82,21 @@ const PROCESSORS: { name: string; purpose: string; data: string; link?: string }
   },
 ];
 
-export default function PrivacyPage() {
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("privacy"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/privacy" label="Privacy Policy" />}
       <PageHero
-        eyebrow="Legal"
-        title="Privacy Policy"
-        description="What we collect, how we use it, and what we don't do with it."
+        cms={{ page: "privacy", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Legal"}
+        title={c.hero_title ?? "Privacy Policy"}
+        description={c.hero_description ?? "What we collect, how we use it, and what we don't do with it."}
       />
 
       <section className="bg-canvas py-16 lg:py-20">

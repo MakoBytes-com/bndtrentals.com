@@ -4,6 +4,10 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { SITE } from "@/lib/site";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms & Conditions",
@@ -65,13 +69,21 @@ const SECTIONS = [
   },
 ];
 
-export default function TermsPage() {
+export default async function TermsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("terms"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/terms" label="Terms & Conditions" />}
       <PageHero
-        eyebrow="Legal"
-        title="Terms & Conditions"
-        description="Standard terms governing equipment rental, calibration, repair, and sales by Burton NDT Rentals."
+        cms={{ page: "terms", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Legal"}
+        title={c.hero_title ?? "Terms & Conditions"}
+        description={c.hero_description ?? "Standard terms governing equipment rental, calibration, repair, and sales by Burton NDT Rentals."}
       />
 
       <section className="bg-canvas py-16 lg:py-20">

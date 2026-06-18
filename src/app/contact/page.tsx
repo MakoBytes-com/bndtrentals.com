@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { LOCATIONS, SITE } from "@/lib/site";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { Editable } from "@/components/cms/Editable";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Contact Us",
@@ -12,13 +17,21 @@ export const metadata: Metadata = pageMetadata({
   path: "/contact",
 });
 
-export default function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("contact"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/contact" label="Contact" />}
       <PageHero
-        eyebrow="Get in touch"
-        title="Three hubs. One number. Real techs."
-        description="Get in touch for equipment availability, custom quotes, calibration scheduling, or technical questions about an inspection job. Pick the closest hub or call HQ — we route on the back end."
+        cms={{ page: "contact", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Get in touch"}
+        title={c.hero_title ?? "Three hubs. One number. Real techs."}
+        description={c.hero_description ?? "Get in touch for equipment availability, custom quotes, calibration scheduling, or technical questions about an inspection job. Pick the closest hub or call HQ — we route on the back end."}
       />
 
       {/* QUICK CONTACT */}
@@ -75,12 +88,12 @@ export default function ContactPage() {
       <section className="border-t border-line bg-canvas-tint py-20 lg:py-24">
         <Container>
           <div className="max-w-2xl">
-            <span className="eyebrow">Service hubs</span>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Three U.S. locations.</h2>
-            <p className="mt-4 text-[17px] text-muted-soft">
-              Each hub stocks calibrated inventory for the surrounding region. Walk-ins by appointment;
-              shipments leave the same business day for orders before 4 p.m. CT.
-            </p>
+            <Editable as="span" className="eyebrow" page="contact" k="hubs_eyebrow" editable={edit}
+              value={c.hubs_eyebrow ?? "Service hubs"} />
+            <Editable as="h2" className="mt-2 text-3xl sm:text-4xl font-bold" page="contact" k="hubs_title" editable={edit}
+              value={c.hubs_title ?? "Three U.S. locations."} />
+            <Editable as="p" className="mt-4 text-[17px] text-muted-soft" page="contact" k="hubs_intro" editable={edit}
+              value={c.hubs_intro ?? "Each hub stocks calibrated inventory for the surrounding region. Walk-ins by appointment; shipments leave the same business day for orders before 4 p.m. CT."} />
           </div>
 
           <div className="mt-12 grid gap-6 lg:grid-cols-3">

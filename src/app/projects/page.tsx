@@ -6,6 +6,10 @@ import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
 import { PROJECTS } from "@/lib/projects";
 import { pageMetadata } from "@/lib/page-metadata";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { EditBar } from "@/components/cms/EditBar";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Equipment in Action",
@@ -14,13 +18,21 @@ export const metadata: Metadata = pageMetadata({
   path: "/projects",
 });
 
-export default function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [c, edit] = await Promise.all([getPageContent("projects"), getEditMode(sp)]);
   return (
     <>
+      {edit && <EditBar path="/projects" label="Projects" />}
       <PageHero
-        eyebrow="Equipment in action"
-        title="See it run before you rent it."
-        description="A quick look at how some of our most-deployed equipment performs in real industrial environments — pipelines, tank floors, weld inspections, and confined-space work."
+        cms={{ page: "projects", editable: edit }}
+        eyebrow={c.hero_eyebrow ?? "Equipment in action"}
+        title={c.hero_title ?? "See it run before you rent it."}
+        description={c.hero_description ?? "A quick look at how some of our most-deployed equipment performs in real industrial environments — pipelines, tank floors, weld inspections, and confined-space work."}
       />
 
       <section className="bg-canvas py-20 lg:py-28">
@@ -59,7 +71,7 @@ export default function ProjectsPage() {
         </Container>
       </section>
 
-      <CtaBanner />
+      <CtaBanner cms={{ page: "projects", editable: edit }} />
     </>
   );
 }
