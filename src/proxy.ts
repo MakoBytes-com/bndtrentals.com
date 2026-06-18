@@ -57,6 +57,13 @@ export function proxy(request: NextRequest) {
   // above carries the same policy so Next nonces its own scripts.
   response.headers.set("Content-Security-Policy", csp);
 
+  // CMS edit mode (?edit=1) is admin-specific and must always be fresh — never
+  // let the CDN share-cache an edit-mode render (it carries edit affordances and
+  // would otherwise mask just-saved changes). Overrides the s-maxage page rule.
+  if (request.nextUrl.searchParams.get("edit") === "1") {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+  }
+
   return response;
 }
 
