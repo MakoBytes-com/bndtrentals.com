@@ -3,6 +3,10 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { getCategories, getTotalProductCount } from "@/lib/catalog";
 import { LOCATIONS, SITE } from "@/lib/site";
+import { getPageContent, getEditMode } from "@/lib/cms";
+import { Editable } from "@/components/cms/Editable";
+import { EditableImage } from "@/components/cms/EditableImage";
+import { EditBar } from "@/components/cms/EditBar";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +38,17 @@ const PILLAR_IMAGE_FALLBACK: Record<string, string> = {
   pmi: "pmi-img.jpg",
 };
 
-export default async function HomePage() {
-  const [categories, total] = await Promise.all([
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const [categories, total, c, edit] = await Promise.all([
     getCategories(),
     getTotalProductCount(),
+    getPageContent("home"),
+    getEditMode(sp),
   ]);
   const pillars = categories.slice(0, 3).map((c) => ({
     ...c,
@@ -52,16 +63,19 @@ export default async function HomePage() {
 
   return (
     <>
+      {edit && <EditBar path="/" label="Home" />}
       {/* HERO */}
       <section className="relative isolate overflow-hidden bg-canvas-deep text-white">
-        <Image
-          src="/images/slider-img.jpg"
+        <EditableImage
+          value={c.hero_image ?? "slider-img.jpg"}
           alt=""
+          page="home"
+          k="hero_image"
+          editable={edit}
           fill
           priority
           sizes="100vw"
           className="absolute inset-0 -z-10 object-cover opacity-40"
-          aria-hidden
         />
         <div
           className="absolute inset-0 -z-10"
@@ -75,17 +89,42 @@ export default async function HomePage() {
         <Container className="py-20 lg:py-28">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-8">
-              <span className="eyebrow">Burton NDT Rentals · Est. 1990</span>
+              <Editable
+                as="span"
+                className="eyebrow"
+                page="home"
+                k="hero_eyebrow"
+                editable={edit}
+                value={c.hero_eyebrow ?? "Burton NDT Rentals · Est. 1990"}
+              />
               <h1 className="mt-4 text-[40px] sm:text-5xl lg:text-[64px] leading-[1.05] font-bold text-white">
-                Industrial inspection equipment,{" "}
-                <span className="text-[var(--color-accent)]">ready when you are.</span>
+                <Editable
+                  as="span"
+                  page="home"
+                  k="hero_title"
+                  editable={edit}
+                  value={c.hero_title ?? "Industrial inspection equipment,"}
+                />{" "}
+                <Editable
+                  as="span"
+                  className="text-[var(--color-accent)]"
+                  page="home"
+                  k="hero_title_accent"
+                  editable={edit}
+                  value={c.hero_title_accent ?? "ready when you are."}
+                />
               </h1>
-              <p className="mt-6 max-w-2xl text-lg text-white/75">
-                NDT, RVI, PMI, X-Ray, and environmental monitoring — rented, sold, calibrated, and
-                repaired by a team that&apos;s been doing this for {SITE.yearsInBusiness}+ years.
-                Three U.S. hubs, calibrated inventory in stock, and turnaround support that doesn&apos;t
-                clock out at 5 p.m.
-              </p>
+              <Editable
+                as="p"
+                className="mt-6 max-w-2xl text-lg text-white/75"
+                page="home"
+                k="hero_subtext"
+                editable={edit}
+                value={
+                  c.hero_subtext ??
+                  `NDT, RVI, PMI, X-Ray, and environmental monitoring — rented, sold, calibrated, and repaired by a team that's been doing this for ${SITE.yearsInBusiness}+ years. Three U.S. hubs, calibrated inventory in stock, and turnaround support that doesn't clock out at 5 p.m.`
+                }
+              />
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/quote"
@@ -143,14 +182,13 @@ export default async function HomePage() {
         <Container>
           <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
             <div className="max-w-2xl">
-              <span className="eyebrow">What we rent</span>
-              <h2 className="mt-2 text-3xl sm:text-4xl lg:text-[44px] leading-[1.1] font-bold">
-                Three pillars. One inspection partner.
-              </h2>
-              <p className="mt-4 text-lg text-muted-soft">
-                Every category in our catalog is calibrated, test-fired, and shipped with the
-                accessories your tech actually needs in the field.
-              </p>
+              <Editable as="span" className="eyebrow" page="home" k="pillars_eyebrow" editable={edit}
+                value={c.pillars_eyebrow ?? "What we rent"} />
+              <Editable as="h2" className="mt-2 text-3xl sm:text-4xl lg:text-[44px] leading-[1.1] font-bold"
+                page="home" k="pillars_title" editable={edit}
+                value={c.pillars_title ?? "Three pillars. One inspection partner."} />
+              <Editable as="p" className="mt-4 text-lg text-muted-soft" page="home" k="pillars_intro" editable={edit}
+                value={c.pillars_intro ?? "Every category in our catalog is calibrated, test-fired, and shipped with the accessories your tech actually needs in the field."} />
             </div>
             <Link
               href="/equipment"
@@ -199,10 +237,11 @@ export default async function HomePage() {
         <Container>
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
             <div className="max-w-2xl">
-              <span className="eyebrow">In the fleet</span>
-              <h2 className="mt-2 text-3xl sm:text-4xl lg:text-[44px] leading-[1.1] font-bold">
-                A few of the workhorses.
-              </h2>
+              <Editable as="span" className="eyebrow" page="home" k="featured_eyebrow" editable={edit}
+                value={c.featured_eyebrow ?? "In the fleet"} />
+              <Editable as="h2" className="mt-2 text-3xl sm:text-4xl lg:text-[44px] leading-[1.1] font-bold"
+                page="home" k="featured_title" editable={edit}
+                value={c.featured_title ?? "A few of the workhorses."} />
               <p className="mt-4 text-lg text-muted-soft">
                 Our most-rented units across NDT, RVI, PMI, and gas monitoring. The full catalog
                 lives over in <Link href="/equipment" className="text-brand font-semibold hover:underline">Equipment</Link>.

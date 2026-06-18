@@ -127,3 +127,70 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ---- Visual CMS edit mode (admin + ?edit=1 only) ---- */
+.cms-edit {
+  outline: 1px dashed rgba(59, 130, 246, 0.5);
+  outline-offset: 3px;
+  border-radius: 2px;
+  cursor: text;
+  transition: outline-color 0.12s ease, background-color 0.12s ease;
+}
+.cms-edit:hover {
+  outline-color: rgba(59, 130, 246, 0.9);
+  background-color: rgba(59, 130, 246, 0.06);
+}
+.cms-edit:focus {
+  outline: 2px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.08);
+}
+.cms-busy { outline-color: #f59e0b !important; }
+.cms-ok { outline-color: #10b981 !important; }
+.cms-err { outline-color: #ef4444 !important; }
+
+.cms-img-edit {
+  outline: 2px dashed rgba(59, 130, 246, 0.7);
+  outline-offset: 3px;
+  cursor: pointer;
+  transition: outline-color 0.12s ease;
+}
+.cms-img-edit:hover { outline-color: #3b82f6; }
+
+.cms-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px;
+  border-radius: 9999px;
+  background: #0b1220;
+  color: #e8edf3;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+}
+.cms-bar-dot {
+  width: 9px; height: 9px; border-radius: 9999px; background: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+  flex: 0 0 auto;
+}
+.cms-bar-title { font-weight: 700; white-space: nowrap; }
+.cms-bar-hint { color: rgba(232, 237, 243, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-bar-btn {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+.cms-bar-btn:hover { background: #2f6fe0; }
+.cms-bar-btn--ghost { background: transparent; border: 1px solid rgba(255,255,255,0.2); }
+.cms-bar-btn--ghost:hover { background: rgba(255,255,255,0.08); }
+@media (max-width: 640px) { .cms-bar-hint { display: none; } }
