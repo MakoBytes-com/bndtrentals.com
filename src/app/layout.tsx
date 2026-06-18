@@ -8,6 +8,7 @@ import { SITE, LOCATIONS } from "@/lib/site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { QuoteCartProvider } from "@/components/QuoteCart";
+import { MakoChatWidget } from "@/components/MakoChatWidget";
 import "./globals.css";
 
 // CartDrawer + BackToTop are interactive UI shells that don't need to be in
@@ -152,6 +153,7 @@ export default async function RootLayout({
         <WebVitals />
         <Analytics />
         <SpeedInsights />
+        <MakoChatWidget />
         <script
           type="application/ld+json"
           nonce={nonce}

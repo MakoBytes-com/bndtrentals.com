@@ -17,7 +17,7 @@ export function proxy(request: NextRequest) {
     // 'strict-dynamic', a script vouched for by a nonced script can fetch
     // additional scripts, but the initial loader URL still needs to be
     // listed explicitly when next/script doesn't get to nonce it.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com https://makochat.app${isDev ? " 'unsafe-eval'" : ""}`,
     // Inline style ATTRIBUTES (style={{...}}) cannot carry a nonce, and a nonce
     // in style-src makes CSP3 browsers ignore 'unsafe-inline'. React and Recharts
     // (admin analytics) emit inline styles, so style-src uses 'unsafe-inline' and
@@ -28,7 +28,7 @@ export function proxy(request: NextRequest) {
     "media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
     // Turnstile's challenge UI renders inside an iframe to
     // challenges.cloudflare.com.
-    "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://challenges.cloudflare.com",
+    "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://challenges.cloudflare.com https://makochat.app",
     // Vercel Analytics + Speed Insights post to /_vercel/insights/* (same
     // origin, allowed by 'self'). Sentry posts to its own ingest endpoint
     // only when SENTRY_DSN is set; allowing it here means flipping the env
