@@ -39,6 +39,13 @@ const nextConfig: NextConfig = {
         source: "/images/uploads/:path*",
         destination: `${supabaseUrl}/storage/v1/object/public/catalog-images/:path*`,
       },
+      {
+        // Admin-uploaded spec-sheet PDFs live in the catalog-pdfs bucket and are
+        // stored as "uploads/<productId>/<file>.pdf", so /pdfs/uploads/* resolves
+        // to the bucket while legacy flat /public/pdfs/<file>.pdf still serve.
+        source: "/pdfs/uploads/:path*",
+        destination: `${supabaseUrl}/storage/v1/object/public/catalog-pdfs/:path*`,
+      },
     ];
   },
   async headers() {

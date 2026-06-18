@@ -114,17 +114,20 @@ export async function uploadProductPdf(formData: FormData): Promise<
     return { ok: false, error: `Upload failed: ${uploadErr.message}` };
   }
 
-  // Persist the public-bucket path on the product row.
+  // Store with an "uploads/" prefix so the public link /pdfs/uploads/<path>
+  // resolves via the next.config rewrite to the catalog-pdfs bucket. (Legacy
+  // flat filenames keep serving from /public/pdfs/.)
+  const pdfValue = `uploads/${path}`;
   const { error: updErr } = await supa
     .from("catalog_products")
-    .update({ pdf: path })
+    .update({ pdf: pdfValue })
     .eq("id", productId);
   if (updErr) {
     return { ok: false, error: `Saved upload but couldn't link product: ${updErr.message}` };
   }
 
   revalidatePath(`/admin/catalog/${productId}`);
-  return { ok: true, filename: path };
+  return { ok: true, filename: pdfValue };
 }
 
 const IMAGE_TYPES: Record<string, string> = {
