@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getAdminSession } from "@/lib/auth/session";
+import { getAdminSession, ADMIN_ONLY_ERROR } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import type { AdminUser } from "@/lib/supabase/types";
 
@@ -37,6 +37,7 @@ function generateTempPassword(): string {
 export async function createUser(input: CreateUserInput): Promise<CreateUserResult> {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false, error: ADMIN_ONLY_ERROR };
 
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) {
@@ -80,6 +81,7 @@ export async function createUser(input: CreateUserInput): Promise<CreateUserResu
 export async function updateUser(input: UpdateUserInput) {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false as const, error: ADMIN_ONLY_ERROR };
 
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
@@ -110,6 +112,7 @@ export async function resetUserPassword(userId: string): Promise<
 > {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false, error: ADMIN_ONLY_ERROR };
   if (typeof userId !== "string" || userId.length < 10) {
     return { ok: false, error: "Invalid user id." };
   }
@@ -135,6 +138,7 @@ export async function resetUserPassword(userId: string): Promise<
 export async function disableUserTotp(userId: string) {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false as const, error: ADMIN_ONLY_ERROR };
   if (typeof userId !== "string" || userId.length < 10) {
     return { ok: false as const, error: "Invalid user id." };
   }
@@ -154,6 +158,7 @@ export async function disableUserTotp(userId: string) {
 export async function deleteUser(userId: string) {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false as const, error: ADMIN_ONLY_ERROR };
   if (typeof userId !== "string" || userId.length < 10) {
     return { ok: false as const, error: "Invalid user id." };
   }

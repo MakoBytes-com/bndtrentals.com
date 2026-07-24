@@ -150,6 +150,9 @@ export async function updateCustomer(input: UpdateCustomerInput) {
 export async function deleteCustomer(customerId: string) {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (session.role !== "admin") {
+    return { ok: false as const, error: "Only the site admin can delete customers. Set status to do-not-contact instead." };
+  }
   if (typeof customerId !== "string" || customerId.length < 10) {
     return { ok: false as const, error: "Invalid customer id." };
   }

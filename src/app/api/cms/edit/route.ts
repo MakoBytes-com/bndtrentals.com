@@ -13,6 +13,10 @@ export async function GET(request: Request) {
   if (!session.userId) {
     redirect("/admin/login");
   }
+  // Page editing is admin-only; staff get bounced to their dashboard.
+  if (session.role !== "admin") {
+    redirect("/admin");
+  }
 
   // Only CMS-editable paths — also keeps the redirect target off user input.
   const requested = new URL(request.url).searchParams.get("path") ?? "/";

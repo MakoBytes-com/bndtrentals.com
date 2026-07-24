@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getAdminSession } from "@/lib/auth/session";
+import { getAdminSession, ADMIN_ONLY_ERROR } from "@/lib/auth/session";
 import type { QuoteLead } from "@/lib/supabase/types";
 
 const updateSchema = z.object({
@@ -63,10 +63,11 @@ export async function setLeadSpam(id: string, spam: boolean) {
   return { ok: true as const };
 }
 
-/** Permanently delete a lead. */
+/** Permanently delete a lead. Admin-only — staff mark spam instead. */
 export async function deleteLead(id: string) {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false as const, error: ADMIN_ONLY_ERROR };
   if (typeof id !== "string" || id.length < 10) {
     return { ok: false as const, error: "Invalid lead id." };
   }

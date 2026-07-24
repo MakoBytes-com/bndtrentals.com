@@ -6,7 +6,7 @@
 // stored as "uploads/..." so they resolve via the /images rewrite.
 
 import { revalidatePath } from "next/cache";
-import { getAdminSession } from "@/lib/auth/session";
+import { getAdminSession, ADMIN_ONLY_ERROR } from "@/lib/auth/session";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { CMS_SLUG_PREFIX, CMS_PAGES } from "@/lib/cms";
 
@@ -51,6 +51,7 @@ export async function savePageField(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false, error: ADMIN_ONLY_ERROR };
   if (typeof page !== "string" || typeof key !== "string") {
     return { ok: false, error: "Invalid target." };
   }
@@ -78,6 +79,7 @@ export async function uploadPageImage(
 ): Promise<{ ok: true; value: string; src: string } | { ok: false; error: string }> {
   const session = await getAdminSession();
   if (!session.userId) return { ok: false, error: "Not signed in." };
+  if (session.role !== "admin") return { ok: false, error: ADMIN_ONLY_ERROR };
 
   const file = formData.get("file");
   const page = String(formData.get("page") ?? "");

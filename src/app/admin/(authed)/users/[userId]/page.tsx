@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getAdminSession } from "@/lib/auth/session";
+import { requireFullAdminPage } from "@/lib/auth/session";
 import { UserEditForm } from "./UserEditForm";
 import type { AdminUser } from "@/lib/supabase/types";
 
@@ -28,7 +28,7 @@ export default async function UserEditPage({
 }) {
   const { userId } = await params;
 
-  const session = await getAdminSession();
+  const session = await requireFullAdminPage();
   const supa = getAdminSupabase();
   const { data, error } = await supa
     .from("admin_users")

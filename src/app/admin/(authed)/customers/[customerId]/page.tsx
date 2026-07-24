@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { isFullAdmin } from "@/lib/auth/session";
 import { CustomerEditForm } from "./CustomerEditForm";
 import type {
   Customer,
@@ -40,6 +41,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ customerId: string }>;
 }) {
   const { customerId } = await params;
+  const canDelete = await isFullAdmin();
   const supa = getAdminSupabase();
 
   const { data, error } = await supa
@@ -120,7 +122,7 @@ export default async function CustomerDetailPage({
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <CustomerEditForm initial={c} />
+          <CustomerEditForm initial={c} canDelete={canDelete} />
 
           {/* Linked quote leads */}
           <section className="rounded-2xl border border-line bg-white p-5">

@@ -12,7 +12,13 @@ const STATUSES: Array<{ value: CustomerStatus; label: string }> = [
   { value: "do_not_contact", label: "Do not contact" },
 ];
 
-export function CustomerEditForm({ initial }: { initial: Customer }) {
+export function CustomerEditForm({
+  initial,
+  canDelete,
+}: {
+  initial: Customer;
+  canDelete: boolean;
+}) {
   const router = useRouter();
   const [form, setForm] = useState({
     email: initial.email,
@@ -168,6 +174,7 @@ export function CustomerEditForm({ initial }: { initial: Customer }) {
         </select>
       </fieldset>
 
+      {canDelete && (
       <section className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
         <h2 className="text-[12px] font-bold uppercase tracking-widest text-rose-700">
           Danger zone
@@ -214,6 +221,7 @@ export function CustomerEditForm({ initial }: { initial: Customer }) {
           </p>
         )}
       </section>
+      )}
 
       <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-2xl border border-line bg-white px-5 py-4 shadow-lg">
         <div className="min-w-0 text-[13px] text-muted">

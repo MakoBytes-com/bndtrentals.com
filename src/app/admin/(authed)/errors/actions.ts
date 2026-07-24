@@ -8,6 +8,7 @@ import { getAdminSession } from "@/lib/auth/session";
 export async function resolveError(errorId: string) {
   const session = await getAdminSession();
   if (!session.userId) redirect("/admin/login");
+  if (session.role !== "admin") redirect("/admin");
   const supa = getAdminSupabase();
   await supa
     .from("error_events")
@@ -20,6 +21,7 @@ export async function resolveError(errorId: string) {
 export async function unresolveError(errorId: string) {
   const session = await getAdminSession();
   if (!session.userId) redirect("/admin/login");
+  if (session.role !== "admin") redirect("/admin");
   const supa = getAdminSupabase();
   await supa
     .from("error_events")

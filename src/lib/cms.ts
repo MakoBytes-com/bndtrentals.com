@@ -66,7 +66,9 @@ export async function getEditMode(): Promise<boolean> {
   if (!isEnabled) return false;
   try {
     const session = await getAdminSession();
-    return Boolean(session.userId);
+    // Page editing is admin-only — staff never see edit affordances even if
+    // a draft cookie is somehow present.
+    return Boolean(session.userId) && session.role === "admin";
   } catch {
     return false;
   }

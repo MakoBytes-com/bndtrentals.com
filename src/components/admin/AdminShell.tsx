@@ -124,6 +124,13 @@ export function AdminShell({
   badges?: AdminBadges;
   children: ReactNode;
 }) {
+  // Staff accounts only see day-to-day modules; the "Web work" section and
+  // user management are admin-only (the pages themselves are gated too —
+  // hiding here is just so staff aren't shown doors they can't open).
+  const isAdmin = session.role === "admin";
+  const accountNav = isAdmin
+    ? ACCOUNT
+    : ACCOUNT.filter((item) => item.href !== "/admin/users");
   const errorCount = badges?.errors ?? 0;
   const initials = (session.fullName ?? session.email ?? "?")
     .split(" ")
@@ -171,6 +178,8 @@ export function AdminShell({
               ))}
             </ul>
 
+            {isAdmin && (
+              <>
             <p className="mt-6 px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
               Web work
             </p>
@@ -198,12 +207,14 @@ export function AdminShell({
                 );
               })}
             </ul>
+              </>
+            )}
 
             <p className="mt-6 px-5 text-[10px] font-bold uppercase tracking-widest text-white/40">
               Account
             </p>
             <ul className="mt-2 space-y-1 px-2">
-              {ACCOUNT.map((item) => (
+              {accountNav.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { CMS_PAGES } from "@/lib/cms";
+import { requireFullAdminPage } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Pages" };
 
-export default function AdminPagesList() {
+export default async function AdminPagesList() {
+  await requireFullAdminPage();
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6">

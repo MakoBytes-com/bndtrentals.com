@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { requireFullAdminPage } from "@/lib/auth/session";
 import type { ErrorEvent } from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
@@ -26,7 +27,14 @@ function fmtRelative(iso: string): string {
 
 type SearchParams = Promise<{ filter?: string; page?: string }>;
 
-export default async function ErrorsPage({
+export default async function ErrorsPage(props: {
+  searchParams: SearchParams;
+}) {
+  await requireFullAdminPage();
+  return ErrorsPageInner(props);
+}
+
+async function ErrorsPageInner({
   searchParams,
 }: {
   searchParams: SearchParams;

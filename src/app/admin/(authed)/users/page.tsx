@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getAdminSession } from "@/lib/auth/session";
+import { requireFullAdminPage } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Users",
@@ -19,7 +19,7 @@ function fmtDate(iso: string | null): string {
 }
 
 export default async function UsersListPage() {
-  const session = await getAdminSession();
+  const session = await requireFullAdminPage();
   const supa = getAdminSupabase();
 
   const { data: users, error } = await supa

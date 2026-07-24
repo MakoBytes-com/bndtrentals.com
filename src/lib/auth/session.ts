@@ -69,3 +69,28 @@ export async function destroyAdminSession() {
   const session = await getAdminSession();
   session.destroy();
 }
+
+/**
+ * True when the signed-in user is a full admin (role "admin"). Staff handle
+ * day-to-day work (leads, customers, recalls, catalog) but can't change the
+ * site itself. Role is cached in the session cookie at login, so a role
+ * change takes effect at the user's next sign-in.
+ */
+export async function isFullAdmin(): Promise<boolean> {
+  const session = await getAdminSession();
+  return Boolean(session.userId) && session.role === "admin";
+}
+
+/**
+ * Page-level gate for admin-only modules (site pages, users, analytics,
+ * errors). Staff are bounced to the dashboard.
+ */
+export async function requireFullAdminPage() {
+  const session = await getAdminSession();
+  if (!session.userId) redirect("/admin/login");
+  if (session.role !== "admin") redirect("/admin");
+  return session;
+}
+
+/** Standard refusal message for admin-only server actions. */
+export const ADMIN_ONLY_ERROR = "Only the site admin can do this.";

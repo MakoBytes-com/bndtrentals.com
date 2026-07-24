@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NewUserForm } from "./NewUserForm";
+import { requireFullAdminPage } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Invite user",
   robots: { index: false, follow: false },
 };
 
-export default function NewUserPage() {
+export default async function NewUserPage() {
+  await requireFullAdminPage();
   return (
     <div className="max-w-2xl">
       <Link

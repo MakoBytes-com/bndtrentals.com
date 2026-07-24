@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { requireFullAdminPage } from "@/lib/auth/session";
 import {
   getAnalyticsSnapshot,
   rateWebVital,
@@ -42,6 +43,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function AnalyticsPage() {
+  await requireFullAdminPage();
   const supa = getAdminSupabase();
 
   const sevenAgo = new Date(Date.now() - 7 * 86400_000).toISOString();

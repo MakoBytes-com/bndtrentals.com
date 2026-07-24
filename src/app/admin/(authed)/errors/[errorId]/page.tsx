@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { requireFullAdminPage } from "@/lib/auth/session";
 import type { ErrorEvent } from "@/lib/supabase/types";
 import { resolveError, unresolveError } from "../actions";
 
@@ -25,6 +26,7 @@ export default async function ErrorDetailPage({
   params: Promise<{ errorId: string }>;
 }) {
   const { errorId } = await params;
+  await requireFullAdminPage();
   const supa = getAdminSupabase();
   const { data, error } = await supa
     .from("error_events")

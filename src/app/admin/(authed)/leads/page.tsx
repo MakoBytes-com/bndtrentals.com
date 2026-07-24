@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { isFullAdmin } from "@/lib/auth/session";
 import type { QuoteLeadStatus } from "@/lib/supabase/types";
 import { LeadRowActions } from "./LeadRowActions";
 
@@ -53,6 +54,7 @@ export default async function LeadsListPage({
   const params = await searchParams;
   const status = (params.status ?? "all") as QuoteLeadStatus | "all";
   const search = (params.q ?? "").trim();
+  const canDelete = await isFullAdmin();
 
   const supa = getAdminSupabase();
   let q = supa
@@ -174,7 +176,7 @@ export default async function LeadsListPage({
                       {formatRelative(lead.created_at)}
                     </td>
                     <td className="px-5 py-4">
-                      <LeadRowActions leadId={lead.id} status={lead.status} />
+                      <LeadRowActions leadId={lead.id} status={lead.status} canDelete={canDelete} />
                     </td>
                   </tr>
                 );
