@@ -1,0 +1,43 @@
+# Claude Duty Officer — @claude in an issue or comment dispatches Claude Code
+# to implement the fix and open a PR. Installed fleet-wide from the Mako
+# Studio portal's Level-2 rollout. Humans review and merge every PR.
+name: Claude Duty Officer
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: claude-${{ github.event.issue.number || github.run_id }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Auth rides the Claude GitHub App (installed org-wide 2026-07-24),
+          # so Claude's commits get proper attribution and trigger CI.
+          claude_args: "--model claude-opus-4-8 --max-turns 40"
