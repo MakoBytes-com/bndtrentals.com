@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     "industrial inspection equipment",
     "calibration services",
     "Texas NDT",
-    "Olympus Eddyfi Niton rental",
+    "Olympus Eddyfi SciAps rental",
   ],
   authors: [{ name: SITE.name }],
   alternates: { canonical: "/" },

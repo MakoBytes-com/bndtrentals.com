@@ -150,12 +150,11 @@ export const APPLICATIONS: Record<string, ApplicationDetail> = {
     longDescription:
       "Remote Visual Inspection (RVI) is an inspection technique that uses tools and technology to remotely examine equipment and structures such as pipelines, large vessels, sewer lines, air ducts, reactors, and more. With RVI, inspectors can take a look at the required areas from a distance without putting themselves in harm's way — especially in narrow and confined spaces that may have hazardous environments.",
     equipment: [
-      { name: "Olympus IPLEX MX II / LX", manufacturer: "Olympus", image: "Olympus_IPLEX_MX_II.jpg" },
+      { name: "Olympus IPLEX G Lite", manufacturer: "Olympus", image: "uploads/81834186-56e8-4e88-ba7f-7a5fd80ba1a2/Olympus-IPLEX-G-Lite.jpg" },
       { name: "Pearpoint P542", manufacturer: "Pearpoint", image: "pro-2.png" },
       { name: "Wohler VIS 350", manufacturer: "Wohler", image: "Wohler-VIS-350.jpg" },
       { name: "RIDGID SeeSnake", manufacturer: "RIDGID", image: "pro9.jpg" },
       { name: "Pearpoint P550 Crawler", manufacturer: "Pearpoint", image: "pro-1.png" },
-      { name: "Inuktun VT150", manufacturer: "Eddyfi Inuktun", image: "Inuktun-VT-150.png" },
       { name: "FLIR Thermal Camera", manufacturer: "FLIR", image: "MicrosoftTeams-imag.jpeg" },
     ],
     applications: [
@@ -216,10 +215,10 @@ export const APPLICATIONS: Record<string, ApplicationDetail> = {
       },
     ],
     equipment: [
-      { name: "Thermo Scientific Niton XL3t", manufacturer: "Thermo Scientific", image: "Thermo_Niton_XL3T.jpg" },
-      { name: "Thermo Scientific Niton XL2 980 GOLDD", manufacturer: "Thermo Scientific", image: "Niton-XL2-980-Gold.jpg" },
-      { name: "Olympus DELTA Professional", manufacturer: "Olympus", image: "Delta-box-item.jpg" },
-      { name: "SciAps Z-Series Handheld LIBS", manufacturer: "SciAps", image: "SciAps-Z-Series-HH-LIBS-600x744-1.jpg" },
+      { name: "SciAps X-550 XRF Analyzer", manufacturer: "SciAps", image: "uploads/e18308ae-4d75-41b1-88ec-6a5d86523ffd/SciAps-X-550-2026.jpg" },
+      { name: "SciAps Z-200 Handheld LIBS", manufacturer: "SciAps", image: "uploads/d612f640-a2e4-41ce-8de3-6f04bbc1a6ed/SciAps-Z-200.png" },
+      { name: "SciAps Z-902 Carbon LIBS", manufacturer: "SciAps", image: "uploads/ffe26310-6285-4b5d-8a30-06f9f27c44c2/SciAps-Z-902-LIBS.jpg" },
+      { name: "SciAps Z-903 Carbon LIBS", manufacturer: "SciAps", image: "uploads/3c160df8-b48d-429b-8962-5044aeb3ba41/SciAps-Z-903-LIBS.jpg" },
     ],
     applications: [
       "Material verification / Identification",
