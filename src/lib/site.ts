@@ -83,6 +83,7 @@ export const NAV_EQUIPMENT = [
   { label: "NDT", href: "/equipment/ndt" },
   { label: "RVI", href: "/equipment/rvi" },
   { label: "PMI", href: "/equipment/pmi" },
+  { label: "GPR", href: "/equipment/gpr" },
   { label: "X-Ray", href: "/equipment/x-ray" },
   { label: "Environmental", href: "/equipment/environmental" },
   { label: "Accessories", href: "/equipment/accessories" },
