@@ -34,7 +34,12 @@ const sora = Sora({
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
-  weight: ["500", "600", "700", "800"],
+  // Sora is the display face (headings + .font-display), and every use renders
+  // at 700 (h1–h5 get font-weight:700 in globals.css; .font-display elements all
+  // pair with font-bold). Requesting 500/600/800 downloaded three extra weight
+  // files that preload on the critical path of every page and compete with the
+  // hero image + render-blocking CSS — dead weight that pushed out FCP/LCP.
+  weight: ["700"],
 });
 
 export const metadata: Metadata = {
