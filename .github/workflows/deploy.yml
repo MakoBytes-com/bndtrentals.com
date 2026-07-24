@@ -1,0 +1,26 @@
+# Deploy-on-merge — closes the gap where this Vercel project has no GitHub
+# auto-deploy integration: merged PRs (including duty-officer fixes) now
+# ship to production automatically instead of waiting for a manual
+# `vercel --prod`. Uploads the checkout; the build runs on Vercel with the
+# project's own env, exactly like the manual flow did.
+name: Deploy to Vercel (production)
+
+on:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: vercel-prod-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
