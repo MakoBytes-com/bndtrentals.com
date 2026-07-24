@@ -73,10 +73,12 @@ type PvRow = {
   referrer: string | null;
   session_id: string;
   country: string | null;
+  is_bot: boolean | null;
   created_at: string;
 };
 
 type WebVitalEvRow = {
+  session_id: string;
   name: string; // "web-vital-lcp" etc.
   data: Record<string, unknown> | null;
 };
@@ -88,7 +90,7 @@ async function fetchRecentPageViews(): Promise<PvRow[]> {
   // Burton's typical 30-day volume is well under 5k.
   const { data, error } = await supa
     .from("page_views")
-    .select("path, referrer, session_id, country, created_at")
+    .select("path, referrer, session_id, country, is_bot, created_at")
     .order("created_at", { ascending: true }) // ordered ascending for time-on-page LEAD math
     .gte("created_at", since)
     .limit(50000);
@@ -102,6 +104,7 @@ async function fetchRecentPageViews(): Promise<PvRow[]> {
 type EvRow = {
   name: string;
   path: string;
+  session_id: string;
   created_at: string;
   data: Record<string, unknown> | null;
 };
@@ -111,7 +114,7 @@ async function fetchRecentEvents(): Promise<EvRow[]> {
   const supa = getAdminSupabase();
   const { data, error } = await supa
     .from("analytics_events")
-    .select("name, path, created_at, data")
+    .select("name, path, session_id, created_at, data")
     .gte("created_at", since)
     .limit(50000);
   if (error) {
@@ -150,7 +153,22 @@ const COUNTRY_NAMES: Record<string, string> = {
 };
 
 export async function getAnalyticsSnapshot(): Promise<Snapshot> {
-  const [pvs, evs] = await Promise.all([fetchRecentPageViews(), fetchRecentEvents()]);
+  const [allPvs, evs] = await Promise.all([fetchRecentPageViews(), fetchRecentEvents()]);
+
+  // Referrer-spoofing bot fleets are flagged is_bot=true at insert (see
+  // gatekeep.isSuspectedBot) rather than dropped, so we can still see them
+  // in raw row counts if needed. Every traffic aggregate below excludes
+  // them — mirrors makologics.com's NOT_ADMIN predicate (path not admin
+  // AND is_bot = false).
+  const pvs = allPvs.filter((r) => !r.is_bot);
+
+  // Bot-session set for the web vitals filter below: a UA-spoofing
+  // crawler session's "load time" isn't field data even though the event
+  // itself lives in analytics_events, which has no is_bot column of its
+  // own — the join happens on session_id against page_views.
+  const botSessionIds = new Set(
+    allPvs.filter((r) => r.is_bot).map((r) => r.session_id),
+  );
 
   // Daily totals
   const dayBuckets = new Map<string, { views: number; sessions: Set<string> }>();
@@ -291,6 +309,19 @@ export async function getAnalyticsSnapshot(): Promise<Snapshot> {
     .sort((a, b) => b.phone + b.quote - (a.phone + a.quote));
 
   // Web Vitals — aggregate `web-vital-{metric}` events into P75 + bucket counts.
+  //
+  // Outlier + bot-session guards (fleet pattern, mirrors WebVitals.tsx and
+  // makologics.com's getWebVitals): backgrounded-tab INP measurements can
+  // balloon to hundreds of seconds, and >20s LCP/FCP/TTFB is a crawler
+  // queue plateau, not a human experience. The client already drops these
+  // at ingest, but this guard keeps any pre-existing bad rows (or a future
+  // client bug) from polluting the dashboard. Bot-session exclusion checks
+  // page_views.is_bot via session_id — analytics_events has no is_bot
+  // column of its own.
+  const INP_OUTLIER_THRESHOLD_MS = 60_000;
+  const LOAD_OUTLIER_THRESHOLD_MS = 20_000;
+  const LOAD_METRICS = new Set<WebVitalMetric>(["lcp", "fcp", "ttfb"]);
+
   const vitalMetrics: WebVitalMetric[] = ["lcp", "inp", "cls", "fcp", "ttfb"];
   const vitalThresholds: Record<WebVitalMetric, { good: number; poor: number }> = {
     lcp: { good: 2500, poor: 4000 },
@@ -308,9 +339,12 @@ export async function getAnalyticsSnapshot(): Promise<Snapshot> {
     if (!r.name.startsWith("web-vital-")) continue;
     const metric = r.name.slice("web-vital-".length) as WebVitalMetric;
     if (!vitalMetrics.includes(metric)) continue;
+    if (botSessionIds.has(r.session_id)) continue;
     const value = Number(r.data?.value);
     const rating = String(r.data?.rating ?? "");
     if (!Number.isFinite(value)) continue;
+    if (metric === "inp" && value > INP_OUTLIER_THRESHOLD_MS) continue;
+    if (LOAD_METRICS.has(metric) && value > LOAD_OUTLIER_THRESHOLD_MS) continue;
     const arr = vitalBuckets.get(metric) ?? [];
     arr.push(value);
     vitalBuckets.set(metric, arr);

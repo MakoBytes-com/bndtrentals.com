@@ -182,6 +182,7 @@ export type PageView = {
   session_id: string;
   ip: string | null;
   country: string | null;
+  is_bot: boolean;
   created_at: string;
 };
 

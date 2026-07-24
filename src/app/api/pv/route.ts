@@ -1,5 +1,5 @@
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { readMeta, shouldAccept } from "@/lib/analytics/gatekeep";
+import { isSuspectedBot, readMeta, shouldAccept } from "@/lib/analytics/gatekeep";
 import { checkRate } from "@/lib/analytics/rate-limit";
 
 export const runtime = "nodejs";
@@ -59,6 +59,7 @@ export async function POST(req: Request) {
       session_id: clamp(sessionId, MAX_SESSION),
       ip: meta.ip,
       country: meta.country,
+      is_bot: isSuspectedBot(meta.userAgent, referrer),
     });
   } catch (err) {
     console.warn("[pv] insert failed", err);
