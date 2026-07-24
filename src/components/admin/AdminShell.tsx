@@ -115,6 +115,11 @@ const ACCOUNT: Array<{ href: string; label: string }> = [
   { href: "/admin/users", label: "Users" },
 ];
 
+// BNDT's ticket queue in the Mako control plane (needs a portal login, so it
+// only shows for full admins).
+const SUPPORT_TICKETS_URL =
+  "https://portal.makoai.studio/admin/clients/faa35fd5-4894-4720-9cae-9699476144e0/tickets";
+
 export function AdminShell({
   session,
   badges,
@@ -224,6 +229,18 @@ export function AdminShell({
                   </Link>
                 </li>
               ))}
+              {isAdmin && (
+                <li>
+                  <a
+                    href={SUPPORT_TICKETS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] text-white/70 hover:bg-white/5 hover:text-white"
+                  >
+                    Support tickets ↗
+                  </a>
+                </li>
+              )}
             </ul>
           </nav>
 
