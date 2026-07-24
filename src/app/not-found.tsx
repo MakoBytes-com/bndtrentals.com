@@ -13,6 +13,13 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <>
+      {/* Flag this render as a 404 before hydration so WebVitals skips it —
+          bot fleets sweeping dead legacy URLs poison the field data. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: 'document.documentElement.dataset.notFound="1"',
+        }}
+      />
       <section className="bg-canvas-deep text-white">
         <Container className="py-20 lg:py-28 text-center">
           <p className="font-display text-[120px] sm:text-[160px] font-bold leading-none text-white/10">
