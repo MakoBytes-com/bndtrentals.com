@@ -22,6 +22,7 @@ type Props = {
   height?: number;
   sizes?: string;
   priority?: boolean;
+  quality?: number;
   className?: string;
   style?: React.CSSProperties;
 };
