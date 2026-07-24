@@ -713,6 +713,15 @@ function WebVitalTile({ stat }: { stat: WebVitalStat }) {
       <div className="mt-1 text-[11px] opacity-70">
         P75 · {stat.samples} sample{stat.samples === 1 ? "" : "s"} · {meta.goal}
       </div>
+      {typeof stat.p75_7d === "number" ? (
+        <div
+          className="mt-1 text-[11px] font-semibold"
+          title="P75 of the last 7 days — shows a recent fix working before the 30-day average moves"
+        >
+          Last 7 days: {meta.toDisplay(stat.p75_7d)}
+          {stat.samples > 0 && stat.p75_7d < stat.p75 ? " ↓ improving" : ""}
+        </div>
+      ) : null}
     </div>
   );
 }

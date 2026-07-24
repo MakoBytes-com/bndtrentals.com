@@ -31,6 +31,9 @@ export type WebVitalStat = {
   good: number;
   needsImprovement: number;
   poor: number;
+  /** 7-day P75 — shows a deployed fix working before the 30d average moves. */
+  p75_7d: number | null;
+  samples7: number;
 };
 
 function isoDaysAgo(n: number): Date {
@@ -80,6 +83,7 @@ type PvRow = {
 type WebVitalEvRow = {
   session_id: string;
   name: string; // "web-vital-lcp" etc.
+  created_at: string;
   data: Record<string, unknown> | null;
 };
 
@@ -331,6 +335,8 @@ export async function getAnalyticsSnapshot(): Promise<Snapshot> {
     ttfb: { good: 800, poor: 1800 },
   };
   const vitalBuckets = new Map<WebVitalMetric, number[]>();
+  const vitalBuckets7 = new Map<WebVitalMetric, number[]>();
+  const sevenDaysAgoMs = Date.now() - 7 * 86_400_000;
   const vitalRatings = new Map<
     WebVitalMetric,
     { good: number; ni: number; poor: number }
@@ -348,27 +354,46 @@ export async function getAnalyticsSnapshot(): Promise<Snapshot> {
     const arr = vitalBuckets.get(metric) ?? [];
     arr.push(value);
     vitalBuckets.set(metric, arr);
+    if (new Date(r.created_at).getTime() >= sevenDaysAgoMs) {
+      const arr7 = vitalBuckets7.get(metric) ?? [];
+      arr7.push(value);
+      vitalBuckets7.set(metric, arr7);
+    }
     const buckets = vitalRatings.get(metric) ?? { good: 0, ni: 0, poor: 0 };
     if (rating === "good") buckets.good += 1;
     else if (rating === "needs-improvement") buckets.ni += 1;
     else if (rating === "poor") buckets.poor += 1;
     vitalRatings.set(metric, buckets);
   }
+  const p75Of = (arr: number[]): number => {
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.75))];
+  };
   const webVitals: WebVitalStat[] = vitalMetrics.map((m) => {
     const arr = vitalBuckets.get(m) ?? [];
+    const arr7 = vitalBuckets7.get(m) ?? [];
     const buckets = vitalRatings.get(m) ?? { good: 0, ni: 0, poor: 0 };
     if (arr.length === 0) {
-      return { metric: m, p75: 0, samples: 0, good: 0, needsImprovement: 0, poor: 0 };
+      return {
+        metric: m,
+        p75: 0,
+        samples: 0,
+        good: 0,
+        needsImprovement: 0,
+        poor: 0,
+        p75_7d: null,
+        samples7: 0,
+      };
     }
-    const sorted = [...arr].sort((a, b) => a - b);
-    const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.75));
     return {
       metric: m,
-      p75: sorted[idx],
+      p75: p75Of(arr),
       samples: arr.length,
       good: buckets.good,
       needsImprovement: buckets.ni,
       poor: buckets.poor,
+      p75_7d: arr7.length >= 10 ? p75Of(arr7) : null,
+      samples7: arr7.length,
     };
   });
 
