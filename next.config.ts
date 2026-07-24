@@ -25,6 +25,13 @@ const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Next 16 only serves the qualities listed here (default is [75]); any
+    // `quality` prop outside this set is rejected by the optimizer at request
+    // time. 45 is for the decorative full-bleed hero backgrounds, which sit at
+    // 30-40% opacity behind a near-opaque gradient — the extra bytes of q75 buy
+    // no visible fidelity there but weigh down the LCP paint. 75 stays the
+    // default for content imagery (product shots, gallery) where it matters.
+    qualities: [45, 75],
   },
   async rewrites() {
     // Admin-uploaded product images live in the Supabase Storage bucket

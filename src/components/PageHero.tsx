@@ -28,6 +28,7 @@ export function PageHero({
           alt=""
           fill
           priority
+          quality={45}
           sizes="100vw"
           className="absolute inset-0 -z-10 object-cover opacity-30"
           aria-hidden
