@@ -11,6 +11,7 @@ import "server-only";
 // identical to today until an admin actually edits something.
 
 import { cache } from "react";
+import { draftMode } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { getAdminSession } from "@/lib/auth/session";
 import type { Database } from "./supabase/types";
@@ -54,14 +55,15 @@ export const getPageContent = cache(async (page: string): Promise<PageContent> =
   }
 });
 
-// Edit mode is on only when ?edit=1 AND the request carries an authenticated
-// admin session. Random visitors appending ?edit=1 get the normal page.
-export async function getEditMode(
-  searchParams?: Record<string, string | string[] | undefined>,
-): Promise<boolean> {
-  const raw = searchParams?.edit;
-  const edit = Array.isArray(raw) ? raw[0] : raw;
-  if (edit !== "1") return false;
+// Edit mode rides on Next draft mode so public pages can stay statically
+// cached: without the draft cookie, draftMode().isEnabled is false during
+// prerender and the session cookie is never touched. With it (set by
+// /api/cms/edit for signed-in admins only), the page renders per-request and
+// the edit affordances appear. A visitor who somehow gets the bypass cookie
+// without an admin session still sees the normal page.
+export async function getEditMode(): Promise<boolean> {
+  const { isEnabled } = await draftMode();
+  if (!isEnabled) return false;
   try {
     const session = await getAdminSession();
     return Boolean(session.userId);

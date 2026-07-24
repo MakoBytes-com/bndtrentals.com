@@ -13,8 +13,9 @@ const securityHeaders = [
     value:
       "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
   },
-  // CSP intentionally omitted here — emitted dynamically per-request via middleware.ts
-  // so we can include a per-request nonce for inline JSON-LD without using 'unsafe-inline'.
+  // CSP intentionally omitted here — emitted per-request via src/proxy.ts,
+  // which picks a nonce policy for admin/editor renders and a cache-safe
+  // allowlist policy for the statically cached public pages.
 ];
 
 const nextConfig: NextConfig = {
@@ -69,20 +70,10 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      {
-        // Page routes — nonces force per-request rendering, but the response
-        // body is identical across users while a cache entry is hot. We let
-        // the CDN keep responses for an hour with a 1-day stale-while-revalidate
-        // window. Static immutable assets (/_next/static) are handled by Next
-        // itself with `immutable` semantics — don't override them.
-        source: "/((?!api|_next|images|pdfs).*)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
-          },
-        ],
-      },
+      // Page routes get their Cache-Control from ISR (revalidate exports on
+      // each page) — no manual override here, it would fight Vercel's ISR
+      // cache. Static immutable assets (/_next/static) are handled by Next
+      // itself with `immutable` semantics.
     ];
   },
 };

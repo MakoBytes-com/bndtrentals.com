@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicCatalog } from "@/lib/revalidate-catalog";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -69,6 +70,7 @@ export async function updateProduct(
   revalidatePath(`/admin/catalog/${data.id}`);
   revalidatePath("/admin/catalog");
   revalidatePath("/admin");
+  revalidatePublicCatalog();
   return { ok: true };
 }
 
@@ -127,6 +129,7 @@ export async function uploadProductPdf(formData: FormData): Promise<
   }
 
   revalidatePath(`/admin/catalog/${productId}`);
+  revalidatePublicCatalog();
   return { ok: true, filename: pdfValue };
 }
 
@@ -188,6 +191,7 @@ export async function uploadProductImage(formData: FormData): Promise<
   }
 
   revalidatePath(`/admin/catalog/${productId}`);
+  revalidatePublicCatalog();
   return { ok: true, image };
 }
 
@@ -207,6 +211,7 @@ export async function deleteProduct(productId: string) {
 
   revalidatePath("/admin/catalog");
   revalidatePath("/admin");
+  revalidatePublicCatalog();
   return { ok: true as const };
 }
 

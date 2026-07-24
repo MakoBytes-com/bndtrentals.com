@@ -8,7 +8,7 @@ import { Editable } from "@/components/cms/Editable";
 import { EditableImage } from "@/components/cms/EditableImage";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const FEATURED = [
   { name: "Olympus 38DL Plus", category: "Ultrasonic Thickness Gauge", image: "olympus-38DL.jpg", href: "/equipment/ndt/olympus-38dl-plus" },
@@ -38,17 +38,12 @@ const PILLAR_IMAGE_FALLBACK: Record<string, string> = {
   pmi: "pmi-img.jpg",
 };
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
+export default async function HomePage() {
   const [categories, total, c, edit] = await Promise.all([
     getCategories(),
     getTotalProductCount(),
     getPageContent("home"),
-    getEditMode(sp),
+    getEditMode(),
   ]);
   const pillars = categories.slice(0, 3).map((c) => ({
     ...c,

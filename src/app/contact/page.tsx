@@ -9,7 +9,7 @@ import { Editable } from "@/components/cms/Editable";
 import { EditBar } from "@/components/cms/EditBar";
 import { ContactForm } from "./ContactForm";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Contact Us",
@@ -18,13 +18,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/contact",
 });
 
-export default async function ContactPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("contact"), getEditMode(sp)]);
+export default async function ContactPage() {
+  const [c, edit] = await Promise.all([getPageContent("contact"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/contact" label="Contact" />}

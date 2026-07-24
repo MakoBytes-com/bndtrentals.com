@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
@@ -82,13 +82,8 @@ const PROCESSORS: { name: string; purpose: string; data: string; link?: string }
   },
 ];
 
-export default async function PrivacyPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("privacy"), getEditMode(sp)]);
+export default async function PrivacyPage() {
+  const [c, edit] = await Promise.all([getPageContent("privacy"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/privacy" label="Privacy Policy" />}
@@ -320,8 +315,8 @@ export default async function PrivacyPage({
             <article>
               <h2 className="text-xl font-bold text-ink">Security</h2>
               <p className="mt-3">
-                The site enforces HTTPS with HSTS preload, a strict
-                Content-Security-Policy with per-request nonces, and modern
+                The site enforces HTTPS with HSTS preload, a
+                Content-Security-Policy, and modern
                 security headers. Form submissions are protected by Cloudflare
                 Turnstile and rate-limited at the server. We do not store
                 payment-card data on our infrastructure — those flows go

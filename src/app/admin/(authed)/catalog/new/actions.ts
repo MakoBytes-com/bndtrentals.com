@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicCatalog } from "@/lib/revalidate-catalog";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -74,6 +75,7 @@ export async function createProduct(input: CreateProductInput) {
 
   revalidatePath("/admin/catalog");
   revalidatePath("/admin");
+  revalidatePublicCatalog();
   return { ok: true as const, id: row.id };
 }
 

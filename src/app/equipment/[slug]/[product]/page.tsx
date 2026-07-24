@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { Container } from "@/components/Container";
 import { CtaBanner } from "@/components/CtaBanner";
 import { AddToQuoteButton } from "@/components/AddToQuoteButton";
@@ -15,7 +14,7 @@ import {
 import { SITE } from "@/lib/site";
 import { pageMetadata } from "@/lib/page-metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   const all = await getAllPublishedProducts();
@@ -57,7 +56,6 @@ export default async function ProductDetail({
   const found = await getProduct(slug, product);
   if (!found) notFound();
   const { product: p, category, subcategoryName } = found;
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   // Related products from same subcategory.
   const cat = await getCategoryBySlug(slug);
@@ -270,12 +268,10 @@ export default async function ProductDetail({
 
       <script
         type="application/ld+json"
-        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
       <script
         type="application/ld+json"
-        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
     </>

@@ -20,7 +20,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/equipment",
 });
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const PILLAR_IMAGES: Record<string, string> = {
   ndt: "ndt-img.jpg",
@@ -32,18 +32,13 @@ const PILLAR_IMAGES: Record<string, string> = {
   consumables: "Magnaflux-Products.png",
 };
 
-export default async function EquipmentPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
+export default async function EquipmentPage() {
   const [categories, total, allProducts, content, edit] = await Promise.all([
     getCategories(),
     getTotalProductCount(),
     getAllPublishedProducts(),
     getPageContent("equipment"),
-    getEditMode(sp),
+    getEditMode(),
   ]);
 
   // Build a single category_id → product count map and look up per render.

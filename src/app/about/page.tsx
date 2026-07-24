@@ -9,7 +9,7 @@ import { getPageContent, getEditMode } from "@/lib/cms";
 import { Editable } from "@/components/cms/Editable";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "About Us",
@@ -50,13 +50,8 @@ const SERVICES = [
   { label: "Industrial X-Ray Radiography", href: "/equipment/x-ray" },
 ];
 
-export default async function AboutPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("about"), getEditMode(sp)]);
+export default async function AboutPage() {
+  const [c, edit] = await Promise.all([getPageContent("about"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/about" label="About" />}

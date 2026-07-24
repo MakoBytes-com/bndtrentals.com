@@ -10,7 +10,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 function calSlug(s: string) {
   return "cal-" + s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -41,14 +41,9 @@ const STEPS = [
   },
 ];
 
-export default async function CalibrationPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
+export default async function CalibrationPage() {
   const categories = await getCategories();
-  const [content, edit] = await Promise.all([getPageContent("calibration"), getEditMode(sp)]);
+  const [content, edit] = await Promise.all([getPageContent("calibration"), getEditMode()]);
   const categoriesWithSubs = await Promise.all(
     categories.map(async (c) => {
       const detail = await getCategoryBySlug(c.slug);

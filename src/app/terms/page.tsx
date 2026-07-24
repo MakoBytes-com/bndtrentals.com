@@ -7,7 +7,7 @@ import { SITE } from "@/lib/site";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms & Conditions",
@@ -69,13 +69,8 @@ const SECTIONS = [
   },
 ];
 
-export default async function TermsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("terms"), getEditMode(sp)]);
+export default async function TermsPage() {
+  const [c, edit] = await Promise.all([getPageContent("terms"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/terms" label="Terms & Conditions" />}

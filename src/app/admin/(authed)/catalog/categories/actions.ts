@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicCatalog } from "@/lib/revalidate-catalog";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -80,6 +81,7 @@ export async function createCategory(input: CreateCategoryInput) {
 
   revalidatePath("/admin/catalog");
   revalidatePath("/admin/catalog/categories");
+  revalidatePublicCatalog();
   return { ok: true as const, id: row.id };
 }
 
@@ -121,6 +123,7 @@ export async function updateCategory(input: UpdateCategoryInput) {
   revalidatePath(`/admin/catalog/categories/${data.id}`);
   revalidatePath("/admin/catalog/categories");
   revalidatePath("/admin/catalog");
+  revalidatePublicCatalog();
   return { ok: true as const };
 }
 
@@ -163,6 +166,7 @@ export async function deleteCategory(categoryId: string) {
 
   revalidatePath("/admin/catalog");
   revalidatePath("/admin/catalog/categories");
+  revalidatePublicCatalog();
   return { ok: true as const };
 }
 

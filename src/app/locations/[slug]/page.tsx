@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
 import { CtaBanner } from "@/components/CtaBanner";
@@ -9,6 +8,8 @@ import { SITE, LOCATIONS } from "@/lib/site";
 import { getCategories } from "@/lib/catalog";
 import { LOCATION_CONTENT, locationContentBySlug } from "@/lib/location-content";
 import { pageMetadata } from "@/lib/page-metadata";
+
+export const revalidate = 3600;
 
 export function generateStaticParams() {
   return Object.keys(LOCATION_CONTENT).map((slug) => ({ slug }));
@@ -53,7 +54,6 @@ export default async function LocationPage({
   if (!content) notFound();
   const loc = LOCATIONS.find((l) => l.city === content.cityKey);
   if (!loc) notFound();
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   // Equipment categories that actually fit this hub's industries
   const allCategories = await getCategories();
@@ -230,7 +230,6 @@ export default async function LocationPage({
 
       <script
         type="application/ld+json"
-        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
       />
     </>

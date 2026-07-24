@@ -7,7 +7,7 @@ import { SITE, LOCATIONS } from "@/lib/site";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Request a Quote",
@@ -16,13 +16,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/quote",
 });
 
-export default async function QuotePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("quote"), getEditMode(sp)]);
+export default async function QuotePage() {
+  const [c, edit] = await Promise.all([getPageContent("quote"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/quote" label="Request a Quote" />}

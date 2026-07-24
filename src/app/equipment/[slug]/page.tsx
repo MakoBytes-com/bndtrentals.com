@@ -10,7 +10,7 @@ import { getCategories, getCategoryBySlug } from "@/lib/catalog";
 import { pageMetadata } from "@/lib/page-metadata";
 import { productDisplayName } from "@/lib/product-name";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   const cats = await getCategories();

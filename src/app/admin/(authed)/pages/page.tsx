@@ -31,7 +31,7 @@ export default function AdminPagesList() {
                 View
               </a>
               <a
-                href={`${p.path}?edit=1`}
+                href={`/api/cms/edit?path=${encodeURIComponent(p.path)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full bg-brand px-5 py-2 text-[13px] font-bold text-white hover:bg-brand-dark"

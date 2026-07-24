@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Inter, Sora } from "next/font/google";
-import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE, LOCATIONS } from "@/lib/site";
@@ -131,8 +130,6 @@ const orgSchema = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
-
   return (
     <html
       lang="en"
@@ -154,9 +151,12 @@ export default async function RootLayout({
         <Analytics />
         <SpeedInsights />
         <MakoChatWidget />
+        {/* JSON-LD is a data block (type application/ld+json), not executable
+            script — browsers don't run it and crawlers read it straight from
+            the markup, so it needs no CSP nonce. Keeping it nonce-free lets
+            public pages prerender statically. */}
         <script
           type="application/ld+json"
-          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
         />
       </body>

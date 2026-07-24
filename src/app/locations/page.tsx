@@ -9,7 +9,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Service Hubs",
@@ -17,13 +17,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/locations",
 });
 
-export default async function LocationsHubPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("locations"), getEditMode(sp)]);
+export default async function LocationsHubPage() {
+  const [c, edit] = await Promise.all([getPageContent("locations"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/locations" label="Locations" />}

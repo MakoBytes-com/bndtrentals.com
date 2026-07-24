@@ -9,7 +9,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Applications",
@@ -18,13 +18,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/applications",
 });
 
-export default async function ApplicationsHub({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const [c, edit] = await Promise.all([getPageContent("applications"), getEditMode(sp)]);
+export default async function ApplicationsHub() {
+  const [c, edit] = await Promise.all([getPageContent("applications"), getEditMode()]);
   return (
     <>
       {edit && <EditBar path="/applications" label="Applications" />}
