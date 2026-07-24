@@ -8,6 +8,12 @@ updates:
       time: "08:00"
       timezone: America/Chicago
     open-pull-requests-limit: 5
+    ignore:
+      # ESLint 10 is incompatible with eslint-config-next (its eslint-plugin-react
+      # only supports ESLint <=9). Re-allow once eslint-config-next declares
+      # support for ESLint 10.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types:
