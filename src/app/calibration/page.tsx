@@ -78,9 +78,9 @@ export default async function CalibrationPage() {
               </div>
               <div>
                 <p className="text-[12px] font-bold uppercase tracking-widest text-accent">Reference</p>
-                <h2 className="mt-1 text-xl font-bold">Burton NDT Calibration Price List</h2>
+                <h2 className="mt-1 text-xl font-bold">Burton NDT Calibration List</h2>
                 <p className="mt-1 text-[14.5px] text-muted">
-                  Full bench-rate price list for our calibration services — published reference; final quotes confirmed by phone.
+                  Full calibration list for our services — published reference; final quotes confirmed by phone.
                 </p>
               </div>
             </div>

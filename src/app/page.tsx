@@ -12,10 +12,10 @@ export const revalidate = 300;
 
 const FEATURED = [
   { name: "Olympus 38DL Plus", category: "Ultrasonic Thickness Gauge", image: "olympus-38DL.jpg", href: "/equipment/ndt/olympus-38dl-plus" },
-  { name: "Thermo Niton XL5", category: "PMI Analyzer", image: "NITON-XL5-PIC.jpg", href: "/equipment/pmi/thermo-niton-xl5" },
+  { name: "SciAps X-550", category: "PMI Analyzer", image: "uploads/e18308ae-4d75-41b1-88ec-6a5d86523ffd/SciAps-X-550-2026.jpg", href: "/equipment/pmi/sciaps-x-550" },
   { name: "Eddyfi Reddy", category: "Eddy Current Flaw Detector", image: "eddyfireddy.png", href: "/equipment/ndt/eddyfi-reddy" },
-  { name: "Olympus IPLEX MX II", category: "Videoscope", image: "Olympus_IPLEX_MX_II.jpg", href: "/equipment/rvi/olympus-iplex-mx-ii" },
-  { name: "Inuktun Versatrax 150", category: "Pipe Crawler", image: "Inuktun-VT-150.png", href: "/equipment/rvi/eddyfi-inuktun-versatrax-150" },
+  { name: "Olympus IPLEX G Lite", category: "Videoscope", image: "uploads/81834186-56e8-4e88-ba7f-7a5fd80ba1a2/Olympus-IPLEX-G-Lite.jpg", href: "/equipment/rvi/olympus-iplex-g-lite" },
+  { name: "Pearpoint flexitrax P550C", category: "Robotic Crawler", image: "pro-1.png", href: "/equipment/rvi/pearpoint-flexitrax-p550c" },
   { name: "Honeywell BW MicroClip XL", category: "Multi-gas Monitor", image: "Honeywell_BW_Microclip_XL.jpg", href: "/equipment/environmental/honeywell-bw-microclip-xl" },
 ];
 
