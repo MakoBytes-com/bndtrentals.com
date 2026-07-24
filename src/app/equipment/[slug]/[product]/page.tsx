@@ -10,7 +10,9 @@ import {
   getAllPublishedProducts,
   getCategoryBySlug,
   getProduct,
+  getProductImages,
 } from "@/lib/catalog";
+import { ProductGallery } from "@/components/ProductGallery";
 import { SITE } from "@/lib/site";
 import { pageMetadata } from "@/lib/page-metadata";
 
@@ -57,6 +59,13 @@ export default async function ProductDetail({
   if (!found) notFound();
   const { product: p, category, subcategoryName } = found;
 
+  // Gallery photos, cover first so the initial view matches listings/OG.
+  const galleryRows = await getProductImages(p.id);
+  const galleryPaths = [
+    ...(p.image ? [p.image] : []),
+    ...galleryRows.map((r) => r.path).filter((path) => path !== p.image),
+  ];
+
   // Related products from same subcategory.
   const cat = await getCategoryBySlug(slug);
   const related =
@@ -68,7 +77,10 @@ export default async function ProductDetail({
     "@context": "https://schema.org",
     "@type": "Product",
     name: productDisplayName(p.manufacturer, p.name),
-    image: p.image ? `${SITE.url}/images/${p.image}` : undefined,
+    image:
+      galleryPaths.length > 0
+        ? galleryPaths.map((path) => `${SITE.url}/images/${path}`)
+        : undefined,
     description: p.description,
     brand: p.manufacturer
       ? { "@type": "Brand", name: p.manufacturer }
@@ -124,22 +136,9 @@ export default async function ProductDetail({
       <section className="bg-canvas py-10 lg:py-14">
         <Container>
           <div className="grid gap-12 lg:grid-cols-12">
-            {/* Image */}
+            {/* Photos */}
             <div className="lg:col-span-6">
-              <div className="overflow-hidden rounded-2xl border border-line bg-canvas-tint">
-                <div className="aspect-[4/3] flex items-center justify-center p-10">
-                  {p.image && (
-                    <Image
-                      src={`/images/${p.image}`}
-                      alt={p.name}
-                      width={900}
-                      height={700}
-                      priority
-                      className="max-h-full w-auto object-contain"
-                    />
-                  )}
-                </div>
-              </div>
+              <ProductGallery images={galleryPaths} alt={p.name} />
             </div>
 
             {/* Header / actions */}

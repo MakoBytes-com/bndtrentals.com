@@ -59,6 +59,17 @@ export type CatalogProduct = {
   updated_at: string;
 };
 
+// Gallery photos per product. products.image stays the cover (used by
+// listings, cart, OG, JSON-LD); this table holds every photo shown on the
+// product page, cover included.
+export type CatalogProductImage = {
+  id: string;
+  product_id: string;
+  path: string;
+  sort_order: number;
+  created_at: string;
+};
+
 export type QuoteLeadStatus = "new" | "in_progress" | "quoted" | "won" | "lost" | "spam";
 
 export type QuoteLead = {
@@ -240,6 +251,12 @@ export type Database = {
         CatalogProduct,
         Partial<CatalogProduct> & Pick<CatalogProduct, "slug" | "category_id" | "name">,
         Partial<CatalogProduct>
+      >;
+      catalog_product_images: TableDef<
+        CatalogProductImage,
+        Partial<CatalogProductImage> &
+          Pick<CatalogProductImage, "product_id" | "path">,
+        Partial<CatalogProductImage>
       >;
       quote_leads: TableDef<
         QuoteLead,

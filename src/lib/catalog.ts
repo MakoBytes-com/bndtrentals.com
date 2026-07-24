@@ -14,6 +14,7 @@ import { createClient } from "@supabase/supabase-js";
 import type {
   CatalogCategory,
   CatalogProduct,
+  CatalogProductImage,
   Database,
 } from "./supabase/types";
 
@@ -148,6 +149,28 @@ export const getProduct = cache(
       category: found.category,
       subcategoryName: product.subcategory ?? "Other",
     };
+  },
+);
+
+/**
+ * All gallery photos for one product, cover-style ordering (sort_order, then
+ * oldest first). RLS only exposes rows for published products to the anon
+ * key. Fails soft to [] so a DB hiccup can't take down the product page.
+ */
+export const getProductImages = cache(
+  async (productId: string): Promise<CatalogProductImage[]> => {
+    const supa = getReadClient();
+    const { data, error } = await supa
+      .from("catalog_product_images")
+      .select("*")
+      .eq("product_id", productId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) {
+      console.error("[catalog] getProductImages failed", error);
+      return [];
+    }
+    return data ?? [];
   },
 );
 

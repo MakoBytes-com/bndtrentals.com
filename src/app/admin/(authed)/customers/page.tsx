@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { CustomerRowActions } from "./CustomerRowActions";
 import type { CustomerStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
@@ -171,6 +172,7 @@ export default async function CustomersListPage({
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-left">Source</th>
                 <th className="px-5 py-3 text-right">Last contact</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -201,6 +203,9 @@ export default async function CustomersListPage({
                   </td>
                   <td className="px-5 py-3.5 text-right text-[12.5px] text-muted">
                     {fmtRelative(c.last_contact_at)}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <CustomerRowActions customerId={c.id} />
                   </td>
                 </tr>
               ))}

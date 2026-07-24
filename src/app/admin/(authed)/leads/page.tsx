@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { QuoteLeadStatus } from "@/lib/supabase/types";
+import { LeadRowActions } from "./LeadRowActions";
 
 export const metadata: Metadata = {
   title: "Quote leads",
@@ -133,6 +134,7 @@ export default async function LeadsListPage({
                 <th className="px-5 py-3 text-left">Items</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Received</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -170,6 +172,9 @@ export default async function LeadsListPage({
                     </td>
                     <td className="px-5 py-4 text-right text-[12.5px] text-muted">
                       {formatRelative(lead.created_at)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <LeadRowActions leadId={lead.id} status={lead.status} />
                     </td>
                   </tr>
                 );

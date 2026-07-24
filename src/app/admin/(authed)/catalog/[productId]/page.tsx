@@ -3,7 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { ProductEditForm } from "./ProductEditForm";
-import type { CatalogCategory, CatalogProduct } from "@/lib/supabase/types";
+import type {
+  CatalogCategory,
+  CatalogProduct,
+  CatalogProductImage,
+} from "@/lib/supabase/types";
 import { productDisplayName } from "@/lib/product-name";
 
 export const metadata: Metadata = {
@@ -36,6 +40,14 @@ export default async function ProductEditPage({
     .eq("id", typedProduct.category_id)
     .maybeSingle();
   const typedCategory = category as Pick<CatalogCategory, "id" | "slug" | "name"> | null;
+
+  const { data: photos } = await supa
+    .from("catalog_product_images")
+    .select("*")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  const typedPhotos = (photos ?? []) as CatalogProductImage[];
 
   return (
     <div>
@@ -77,6 +89,7 @@ export default async function ProductEditPage({
           is_published: typedProduct.is_published,
         }}
         categoryName={typedCategory?.name ?? null}
+        initialPhotos={typedPhotos}
       />
     </div>
   );

@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import {
   updateProduct,
   uploadProductPdf,
-  uploadProductImage,
+  removeProductPdf,
+  uploadProductPhotos,
+  deleteProductPhoto,
+  setProductCoverPhoto,
   deleteProduct,
 } from "./actions";
+import type { CatalogProductImage } from "@/lib/supabase/types";
 
 // Resolve a stored image value to a renderable src: uploaded images are stored
 // as "uploads/..." (served via the /images rewrite); legacy values are bare
@@ -34,12 +38,15 @@ type Initial = {
 export function ProductEditForm({
   initial,
   categoryName: _categoryName,
+  initialPhotos,
 }: {
   initial: Initial;
   categoryName: string | null;
+  initialPhotos: CatalogProductImage[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState<Initial>(initial);
+  const [photos, setPhotos] = useState<CatalogProductImage[]>(initialPhotos);
   const [applicationsText, setApplicationsText] = useState(
     initial.applications.join("\n"),
   );
@@ -96,18 +103,23 @@ export function ProductEditForm({
     });
   }
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  const [photoConfirmId, setPhotoConfirmId] = useState<string | null>(null);
+  const [removingPdf, setRemovingPdf] = useState(false);
+
+  async function handlePhotosUpload(e: React.ChangeEvent<HTMLInputElement>) {
     setImageError(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
     setUploadingImage(true);
     try {
       const fd = new FormData();
-      fd.set("file", file);
+      for (const file of files) fd.append("files", file);
       fd.set("productId", form.id);
-      const result = await uploadProductImage(fd);
+      const result = await uploadProductPhotos(fd);
       if (result.ok) {
-        setForm((f) => ({ ...f, image: result.image }));
+        setPhotos((p) => [...p, ...result.images]);
+        setForm((f) => ({ ...f, image: result.cover ?? f.image }));
       } else {
         setImageError(result.error);
       }
@@ -116,6 +128,59 @@ export function ProductEditForm({
     } finally {
       setUploadingImage(false);
       if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeletePhoto(imageId: string) {
+    setImageError(null);
+    setPhotoConfirmId(null);
+    setPhotoBusyId(imageId);
+    try {
+      const result = await deleteProductPhoto(imageId);
+      if (result.ok) {
+        setPhotos((p) => p.filter((x) => x.id !== imageId));
+        setForm((f) => ({ ...f, image: result.cover ?? "" }));
+      } else {
+        setImageError(result.error);
+      }
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "Delete failed.");
+    } finally {
+      setPhotoBusyId(null);
+    }
+  }
+
+  async function handleMakeCover(imageId: string) {
+    setImageError(null);
+    setPhotoBusyId(imageId);
+    try {
+      const result = await setProductCoverPhoto(imageId);
+      if (result.ok) {
+        setForm((f) => ({ ...f, image: result.cover }));
+      } else {
+        setImageError(result.error);
+      }
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "Couldn't set cover.");
+    } finally {
+      setPhotoBusyId(null);
+    }
+  }
+
+  async function handleRemovePdf() {
+    setUploadError(null);
+    setRemovingPdf(true);
+    try {
+      const result = await removeProductPdf(form.id);
+      if (result.ok) {
+        setForm((f) => ({ ...f, pdf: "" }));
+      } else {
+        setUploadError(result.error);
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Remove failed.");
+    } finally {
+      setRemovingPdf(false);
     }
   }
 
@@ -217,84 +282,155 @@ export function ProductEditForm({
 
       <section className="rounded-2xl border border-line bg-white p-6">
         <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">
-          Image & PDF
+          Photos
+        </h2>
+        <p className="mt-2 text-[12.5px] text-muted">
+          The <strong>cover</strong> photo shows in the catalog list, cart, and
+          search results. Every photo shows in the gallery on the product page.
+        </p>
+
+        {photos.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-line bg-canvas-tint p-5 text-center text-[13px] text-muted">
+            No photos yet — add some below.
+          </p>
+        ) : (
+          <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {photos.map((photo) => {
+              const isCover = photo.path === form.image;
+              const busy = photoBusyId === photo.id;
+              return (
+                <li
+                  key={photo.id}
+                  className={`rounded-xl border p-2 ${isCover ? "border-brand ring-2 ring-brand/25" : "border-line"}`}
+                >
+                  <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-lg bg-canvas-tint">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageSrc(photo.path) ?? ""}
+                      alt=""
+                      className="size-full object-contain"
+                    />
+                    {isCover && (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-bold text-white">
+                        Cover
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {!isCover && (
+                      <button
+                        type="button"
+                        onClick={() => handleMakeCover(photo.id)}
+                        disabled={busy}
+                        className="rounded-full border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-ink hover:bg-canvas-tint disabled:opacity-60"
+                      >
+                        {busy ? "…" : "Make cover"}
+                      </button>
+                    )}
+                    {photoConfirmId === photo.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePhoto(photo.id)}
+                          disabled={busy}
+                          className="rounded-full bg-rose-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-rose-700 disabled:opacity-60"
+                        >
+                          {busy ? "Deleting…" : "Yes, delete"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPhotoConfirmId(null)}
+                          className="rounded-full border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-muted hover:bg-canvas-tint"
+                        >
+                          Keep
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPhotoConfirmId(photo.id)}
+                        disabled={busy}
+                        className="rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="mt-4">
+          <label
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-[13.5px] font-bold text-white ${
+              uploadingImage ? "bg-brand/60" : "bg-brand hover:bg-brand-dark"
+            }`}
+          >
+            {uploadingImage ? "Uploading…" : "Add photos"}
+            <input
+              ref={imageInputRef}
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              onChange={handlePhotosUpload}
+              disabled={uploadingImage}
+              className="hidden"
+            />
+          </label>
+          <p className="mt-2 text-[12px] text-muted-soft">
+            JPEG, PNG, WebP, or AVIF · max 10 MB each · pick several at once.
+            New photos go live immediately.
+          </p>
+          {imageError && (
+            <p role="alert" className="mt-2 text-[12.5px] font-semibold text-accent">
+              {imageError}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-white p-6">
+        <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">
+          Spec sheet (PDF)
         </h2>
 
-        <Field label="Product image" className="mt-4">
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-canvas-tint">
-              {imageSrc(form.image) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={imageSrc(form.image) as string}
-                  alt="Current product"
-                  className="size-full object-contain"
-                />
-              ) : (
-                <span className="px-2 text-center text-[11px] text-muted-soft">
-                  No image
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <label
-                className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-[13.5px] font-bold text-white ${
-                  uploadingImage ? "bg-brand/60" : "bg-brand hover:bg-brand-dark"
-                }`}
-              >
-                {uploadingImage ? "Uploading…" : "Upload image"}
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
-                  onChange={handleImageUpload}
-                  disabled={uploadingImage}
-                  className="hidden"
-                />
-              </label>
-              <p className="mt-2 text-[12px] text-muted-soft">
-                JPEG, PNG, WebP, or AVIF · max 10 MB. Replaces the current image
-                and goes live after you click Save.
-              </p>
-              {imageError && (
-                <p role="alert" className="mt-2 text-[12.5px] font-semibold text-accent">
-                  {imageError}
-                </p>
-              )}
-            </div>
+        {form.pdf ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-canvas-tint p-4">
+            <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">
+              {form.pdf}
+            </span>
+            <a
+              href={form.pdf.startsWith("http") ? form.pdf : `/pdfs/${form.pdf}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-line bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:bg-canvas-tint"
+            >
+              View
+            </a>
+            <button
+              type="button"
+              onClick={handleRemovePdf}
+              disabled={removingPdf}
+              className="rounded-full border border-rose-200 bg-white px-4 py-2 text-[13px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+            >
+              {removingPdf ? "Removing…" : "Remove"}
+            </button>
           </div>
-          <input
-            type="text"
-            value={form.image}
-            onChange={(e) => setForm({ ...form, image: e.target.value })}
-            className={`${inputClass} mt-3`}
-            placeholder="olympus-38DL.jpg"
-          />
-          <p className="mt-1 text-[12px] text-muted-soft">
-            Advanced: the stored image reference. Uploading fills this in
-            automatically — you usually won&apos;t edit it by hand.
+        ) : (
+          <p className="mt-4 rounded-xl border border-dashed border-line bg-canvas-tint p-4 text-[13px] text-muted">
+            No spec sheet attached.
           </p>
-        </Field>
-
-        <Field label="Spec sheet PDF" className="mt-4">
-          <input
-            type="text"
-            value={form.pdf}
-            onChange={(e) => setForm({ ...form, pdf: e.target.value })}
-            className={inputClass}
-            placeholder="(empty) or filename in /public/pdfs/"
-          />
-          <p className="mt-1 text-[12px] text-muted-soft">
-            Or upload a new PDF below — the path automatically updates.
-          </p>
-        </Field>
+        )}
 
         <div className="mt-4 rounded-xl border border-dashed border-line bg-canvas-tint p-5">
-          <p className="text-[13px] font-semibold text-ink">Upload a new spec sheet</p>
+          <p className="text-[13px] font-semibold text-ink">
+            {form.pdf ? "Replace the spec sheet" : "Upload a spec sheet"}
+          </p>
           <p className="mt-1 text-[12.5px] text-muted">
-            PDF only, max 20 MB. Files are stored in the{" "}
-            <code className="font-mono">catalog-pdfs</code> bucket and served
-            publicly via Supabase Storage.
+            PDF only, max 20 MB. Uploading replaces the current one and goes
+            live immediately.
           </p>
           <input
             ref={pdfInputRef}

@@ -41,3 +41,41 @@ export async function updateLead(input: UpdateLeadInput) {
   revalidatePath("/admin");
   return { ok: true as const };
 }
+
+/** One-click spam flag from the inbox (or "not spam" back to new). */
+export async function setLeadSpam(id: string, spam: boolean) {
+  const session = await getAdminSession();
+  if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (typeof id !== "string" || id.length < 10) {
+    return { ok: false as const, error: "Invalid lead id." };
+  }
+
+  const supa = getAdminSupabase();
+  const { error } = await supa
+    .from("quote_leads")
+    .update({ status: spam ? "spam" : "new", assigned_to: session.userId })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath(`/admin/leads/${id}`);
+  revalidatePath("/admin/leads");
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
+
+/** Permanently delete a lead. */
+export async function deleteLead(id: string) {
+  const session = await getAdminSession();
+  if (!session.userId) return { ok: false as const, error: "Not signed in." };
+  if (typeof id !== "string" || id.length < 10) {
+    return { ok: false as const, error: "Invalid lead id." };
+  }
+
+  const supa = getAdminSupabase();
+  const { error } = await supa.from("quote_leads").delete().eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/admin/leads");
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
