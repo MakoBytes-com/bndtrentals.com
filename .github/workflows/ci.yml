@@ -1,0 +1,62 @@
+name: CI
+
+# Builds the site on every PR and every push to main.
+#
+# WHY THIS EXISTS (added 2026-07-27): the fleet had gitleaks, uptime checks, a
+# duty officer and Dependabot auto-merge — but nothing that ever compiled the
+# code. So "all checks passed" on a dependency PR meant only "no secrets were
+# committed", and auto-merge had nothing meaningful to wait on. 30 Dependabot
+# PRs piled up across 11 repos, and every dependency merge that DID go through
+# went in unverified.
+#
+# lint and typecheck run with --if-present because the fleet is not uniform:
+# some repos have both, some only lint, one only build. A missing script is not
+# a failure. `npm run build` is NOT --if-present — every repo has one, and a
+# repo that loses its build script should fail loudly.
+#
+# Note on env: the build runs with no secrets. That is deliberate — it proves
+# the app compiles without depending on a value only production has. If a repo
+# ever needs a real value at build time, add it as a repo secret and reference
+# it here rather than weakening the check.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push makes an in-flight run pointless — cancel it rather than pay for
+# it. Never cancels on main, where the run is the record of what shipped.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Build
+        run: npm run build
+        env:
+          # Next collects anonymous telemetry on build; off in CI so a network
+          # hiccup to a telemetry endpoint can never fail a build.
+          NEXT_TELEMETRY_DISABLED: "1"
