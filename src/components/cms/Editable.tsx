@@ -61,6 +61,7 @@ export function Editable({
   const stateClass =
     status === "saving" ? "cms-busy" : status === "saved" ? "cms-ok" : status === "error" ? "cms-err" : "";
 
+  // eslint-disable-next-line react-hooks/refs -- The ref is being FORWARDED as a prop to createElement, not read during render. Nothing dereferences .current here.
   return createElement(as, {
     ref,
     className: `${className ?? ""} cms-edit ${stateClass}`.trim(),

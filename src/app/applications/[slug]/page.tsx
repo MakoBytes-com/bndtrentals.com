@@ -146,7 +146,7 @@ export default async function ApplicationDetail({
         <section className="border-t border-line bg-canvas-tint py-16 lg:py-20">
           <Container>
             <span className="eyebrow">{app.abbr} applications</span>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Where it's used</h2>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Where it&apos;s used</h2>
             <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-[15.5px]">
               {app.applications.map((a) => (
                 <li key={a} className="flex items-start gap-3 rounded-lg bg-white p-4 ring-1 ring-line">

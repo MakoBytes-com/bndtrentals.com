@@ -92,6 +92,7 @@ export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
   // an empty cart rather than throwing.
   useEffect(() => {
     if (typeof window === "undefined") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Deliberate. Turnstile tokens are SINGLE-USE: after a failed submit the widget must be reset and remounted, or the next attempt replays a spent token and fails forever. Synchronising with an external widget is the documented exception; deleting this effect would lock users out.
       setHydrated(true);
       return;
     }

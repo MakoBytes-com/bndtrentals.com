@@ -46,10 +46,14 @@ export default async function AnalyticsPage() {
   await requireFullAdminPage();
   const supa = getAdminSupabase();
 
+  // eslint-disable-next-line react-hooks/purity -- This is a SERVER component, not a render-pure client component. Reading the clock is the point — it drives session-expiry checks and the analytics date windows. There is no render to keep pure here.
   const sevenAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+  // eslint-disable-next-line react-hooks/purity -- This is a SERVER component, not a render-pure client component. Reading the clock is the point — it drives session-expiry checks and the analytics date windows. There is no render to keep pure here.
   const thirtyAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
+  // eslint-disable-next-line react-hooks/purity -- This is a SERVER component, not a render-pure client component. Reading the clock is the point — it drives session-expiry checks and the analytics date windows. There is no render to keep pure here.
   const ninetyAgo = new Date(Date.now() - 90 * 86400_000).toISOString();
   const todayDate = new Date().toISOString().slice(0, 10);
+  // eslint-disable-next-line react-hooks/purity -- This is a SERVER component, not a render-pure client component. Reading the clock is the point — it drives session-expiry checks and the analytics date windows. There is no render to keep pure here.
   const in30Date = new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
 
   // Lead funnel + counts.

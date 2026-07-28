@@ -71,6 +71,7 @@ export default async function CalibrationListPage({
     .limit(200);
 
   const today = new Date().toISOString().slice(0, 10);
+  // eslint-disable-next-line react-hooks/purity -- This is a SERVER component, not a render-pure client component. Reading the clock is the point — it drives session-expiry checks and the analytics date windows. There is no render to keep pure here.
   const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
