@@ -37,7 +37,18 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Runs on Russell's Claude Max subscription, NOT pay-per-token API
+          # billing. Switched 2026-07-28 after a night of auto-dispatch put the
+          # API account into its monthly cap: the portal's own triage calls are
+          # genuinely cheap (~$1.07 across all of July), but each agent run here
+          # is a full loop over the repo and measured $1.12 for a SINGLE run of
+          # 28 turns. Thirteen fired at once and most failed.
+          #
+          # Token comes from `claude setup-token` (Pro/Max only) and lives as the
+          # org secret CLAUDE_CODE_OAUTH_TOKEN. Note this spends Max plan usage
+          # limits, which are shared with interactive Claude Code sessions — it
+          # is already-paid-for, not unlimited.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Auth rides the Claude GitHub App (installed org-wide 2026-07-24),
           # so Claude's commits get proper attribution and trigger CI.
           claude_args: "--model claude-opus-4-8 --max-turns 40"
