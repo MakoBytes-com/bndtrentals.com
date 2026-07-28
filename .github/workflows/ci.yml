@@ -22,7 +22,11 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # The fleet is not uniform: makochat.app still defaults to `master` while
+    # everything else uses `main`. Listing both means a repo's branch name can
+    # never silently switch CI off — which is exactly what happened when this
+    # workflow first shipped with `[main]` only and makochat never ran once.
+    branches: [main, master]
 
 # A newer push makes an in-flight run pointless — cancel it rather than pay for
 # it. Never cancels on main, where the run is the record of what shipped.
