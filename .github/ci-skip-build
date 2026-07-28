@@ -1,0 +1,12 @@
+This repo cannot build in CI without production secrets.
+
+The auth module throws while Next collects page data:
+
+    Error: [bndt auth] IRON_SESSION_PASSWORD must be set to a 32+ character
+    random string in production.
+    Error: Failed to collect page data for /admin/logout
+
+To build here, this repo needs IRON_SESSION_PASSWORD as a GitHub secret.
+Until then, Vercel's preview deployment is the build check for this repo — it
+runs with the production environment. CI still lints and typechecks, which
+Vercel does not do.
