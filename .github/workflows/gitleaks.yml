@@ -1,0 +1,52 @@
+name: gitleaks
+
+# Secret scanning via the upstream gitleaks binary (MIT-licensed, free).
+#
+# NOT gitleaks/gitleaks-action@v2 — that wrapper is paywalled for ORG-OWNED
+# repos, so on a MakoBytes-com repo it cannot actually scan. Running the CLI
+# directly gives the same rules with no license gate.
+#
+# Added fleet-wide 2026-07-28. Before this, 19 of 24 repos had NO secret
+# scanning of any kind, and one was still on the paywalled wrapper. A committed
+# credential would have reached main with nothing to catch it.
+#
+# Branch list covers main AND master: the fleet is not uniform, and a workflow
+# pointed at a branch nobody pushes to is indistinguishable from no workflow —
+# that exact mistake silently disabled CI on makochat.app earlier the same day.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Weekly full-history sweep, Monday 08:00 UTC. Catches anything that landed
+    # through a path the push trigger missed.
+    - cron: "0 8 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+        with:
+          # Full history — a secret is just as live in an old commit as in HEAD.
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          VERSION="8.21.2"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" | tar -xz
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan repo history
+        # --exit-code 1 so a finding FAILS the run. A scanner that reports a
+        # leak and exits 0 is worse than no scanner: it produces a green tick
+        # over a live credential.
+        run: gitleaks detect --source . --verbose --redact --exit-code 1
