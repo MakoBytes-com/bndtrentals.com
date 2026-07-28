@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           # Full history — a secret is just as live in an old commit as in HEAD.
           fetch-depth: 0
