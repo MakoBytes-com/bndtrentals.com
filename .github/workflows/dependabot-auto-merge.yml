@@ -1,8 +1,30 @@
 name: Dependabot auto-merge
 
-# Auto-merges Dependabot PRs that bump a dependency by a PATCH version
-# only (semver patch = bug fixes / security only, no API changes).
-# Minor + major bumps still require manual review.
+# Auto-merges Dependabot PRs that bump a dependency by a PATCH or MINOR
+# version. Majors always wait for a human — they can ship breaking changes.
+#
+# WHY MINOR IS INCLUDED (fixed 2026-07-27): dependabot.yml groups minor and
+# patch bumps into ONE pull request, and a grouped PR's update-type resolves
+# to the HIGHEST bump in the group — i.e. "minor". A patch-only rule therefore
+# never fires on a grouped PR, so every weekly batch waited on a human
+# forever. Four PRs sat open 70 days here before anyone noticed. Same root
+# cause was found and fixed on makoai.studio and bulldogsecurityservice.com
+# the same week.
+#
+# How it works:
+#  1. Dependabot opens a PR (weekly per .github/dependabot.yml, plus
+#     ad-hoc when a security advisory lands)
+#  2. Vercel runs its build on the PR (preview deploy)
+#  3. This workflow inspects the PR metadata
+#  4. If update-type is semver-patch or semver-minor, calls
+#     `gh pr merge --auto` which queues the merge to happen when
+#     all required checks pass
+#  5. If Vercel build fails, the merge never fires; the PR stays
+#     open for human review
+#
+# Safety net: if a patch bump ever breaks something, Russell can
+# disable this workflow by deleting this file or setting it disabled
+# in repo Settings -> Actions.
 
 on:
   pull_request_target:
@@ -26,8 +48,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Auto-merge patch updates
-        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+      - name: Auto-merge patch and minor updates
+        if: |
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.update-type == 'version-update:semver-minor'
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
