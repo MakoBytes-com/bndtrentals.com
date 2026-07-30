@@ -2,6 +2,7 @@ import "server-only";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { sendRecallNotification } from "@/lib/email/recall-notification";
 import type { CalibrationRecall } from "@/lib/supabase/types";
+import { pingHeartbeat } from "@/lib/heartbeat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,11 @@ export async function GET(req: Request) {
   if (!isAuthorized(req)) {
     return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+
+  // Dead-man's switch: nothing noticed if this schedule stopped firing, and a
+  // recall notification that never goes out is invisible to us and visible to
+  // the customer. MakoPulse alerts if no check-in arrives in 24h + 2h grace.
+  await pingHeartbeat("MAKOPULSE_HB_RECALLS");
 
   const supa = getAdminSupabase();
   const now = new Date();

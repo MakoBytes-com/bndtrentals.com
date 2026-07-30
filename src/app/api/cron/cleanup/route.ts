@@ -1,5 +1,6 @@
 import "server-only";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { pingHeartbeat } from "@/lib/heartbeat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,11 @@ export async function GET(req: Request) {
   if (!isAuthorized(req)) {
     return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+
+  // Dead-man's switch: a weekly cleanup that quietly stops just lets data
+  // accumulate, which looks like nothing at all until it doesn't.
+  // MakoPulse alerts if no check-in arrives in 7 days + 1 day grace.
+  await pingHeartbeat("MAKOPULSE_HB_CLEANUP");
 
   const supa = getAdminSupabase();
   const now = Date.now();
