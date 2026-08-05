@@ -51,4 +51,4 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Auth rides the Claude GitHub App (installed org-wide 2026-07-24),
           # so Claude's commits get proper attribution and trigger CI.
-          claude_args: "--model claude-opus-4-8 --max-turns 40"
+          claude_args: "--model claude-opus-4-8 --max-turns 80"
