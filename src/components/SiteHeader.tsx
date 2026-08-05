@@ -101,7 +101,16 @@ export function SiteHeader() {
                 src="/images/logo-2.png"
                 alt={SITE.name}
                 fill
-                priority
+                // Eager (so the header mark is in the first paint, no lazy-load
+                // flicker for above-the-fold chrome) but NOT `priority`: the
+                // full-bleed homepage hero background is the LCP element and
+                // already owns the single high-priority image preload. Marking
+                // the logo `priority` too emitted a second fetchpriority=high
+                // preload <link> that contended with the hero for the initial
+                // connection on bandwidth-constrained mobile links, pushing out
+                // LCP/FCP. Preloading only the LCP image is the documented
+                // next/image guidance; the logo still paints promptly.
+                loading="eager"
                 sizes="230px"
                 className="object-contain object-left brightness-0"
               />
