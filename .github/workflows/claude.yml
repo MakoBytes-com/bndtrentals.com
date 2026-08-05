@@ -52,3 +52,50 @@ jobs:
           # Auth rides the Claude GitHub App (installed org-wide 2026-07-24),
           # so Claude's commits get proper attribution and trigger CI.
           claude_args: "--model claude-opus-4-8 --max-turns 80"
+      # claude-code-action pushes a branch and stops — it has no PR creation of
+      # its own, and its docs point at `gh pr create` as a separate step.
+      # Without this, every finished fix sat waiting on a human to click a link,
+      # which is most of "every day I am having to submit fixes manually".
+      #
+      # Best-effort by design: `if: always()` and a tolerant script, so a run
+      # where nothing was pushed — or where a PR already exists — is a quiet
+      # no-op rather than a red workflow. Failing here must never make a
+      # successful agent run look failed.
+      #
+      # CI still covers the code either way: ci.yml runs on push, so the branch
+      # commit is checked whether or not this step opens the PR.
+      - name: Open a PR for the branch Claude pushed
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ github.event.issue.number }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -u
+          git fetch origin --quiet || true
+          BRANCH=$(git for-each-ref --sort=-committerdate             --format='%(refname:short)'             "refs/remotes/origin/claude/issue-${ISSUE}-*"             | head -1 | sed 's|^origin/||')
+          if [ -z "${BRANCH:-}" ]; then
+            echo "No claude/issue-${ISSUE}-* branch was pushed; nothing to open."
+            exit 0
+          fi
+          if [ -z "$(git rev-list "origin/${BASE_BRANCH}..origin/${BRANCH}" 2>/dev/null)" ]; then
+            echo "${BRANCH} is not ahead of ${BASE_BRANCH}; nothing to open."
+            exit 0
+          fi
+          EXISTING=$(gh pr list --head "${BRANCH}" --state all --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "${EXISTING:-}" ]; then
+            echo "PR #${EXISTING} already exists for ${BRANCH}."
+            exit 0
+          fi
+          # Body is written to a file so no multi-line string has to survive
+          # YAML block-scalar indentation rules.
+          {
+            echo "Fixes #${ISSUE}."
+            echo
+            git log -1 --format=%b "origin/${BRANCH}"
+            echo
+            echo "---"
+            echo "Opened automatically from the branch the duty officer pushed for #${ISSUE}."
+            echo "The agent cannot run npm inside its sandbox, so do NOT merge without a green CI run and a human read of the diff."
+          } > /tmp/claude-pr-body.md
+          gh pr create             --head "${BRANCH}"             --base "${BASE_BRANCH}"             --title "$(git log -1 --format=%s "origin/${BRANCH}")"             --body-file /tmp/claude-pr-body.md || echo "PR creation failed; branch ${BRANCH} is pushed and can be opened by hand."
