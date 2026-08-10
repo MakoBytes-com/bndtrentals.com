@@ -36,5 +36,15 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 5
+    # Mirror the npm pattern: batch minor+patch action bumps into ONE PR so they
+    # auto-merge together, instead of opening a separate PR per action every
+    # cycle. Majors stay individual and wait for a human, because a major action
+    # bump can change runner behaviour silently.
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
     commit-message:
       prefix: ci
