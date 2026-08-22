@@ -59,8 +59,14 @@ jobs:
       #
       # Best-effort by design: `if: always()` and a tolerant script, so a run
       # where nothing was pushed — or where a PR already exists — is a quiet
-      # no-op rather than a red workflow. Failing here must never make a
-      # successful agent run look failed.
+      # no-op rather than a red workflow — those cases exit 0 above.
+      #
+      # A REFUSED `gh pr create` is not one of those cases and must be loud.
+      # This used to end in `|| echo`, so when the repo forbade Actions from
+      # opening PRs the step printed one line and the run still reported
+      # success. The portal saw a green run with no PR, guessed the wrong
+      # cause, and handed the card back to be dispatched again — while the
+      # finished fix sat on a branch nobody knew about.
       #
       # CI still covers the code either way: ci.yml runs on push, so the branch
       # commit is checked whether or not this step opens the PR.
@@ -98,4 +104,13 @@ jobs:
             echo "Opened automatically from the branch the duty officer pushed for #${ISSUE}."
             echo "The agent cannot run npm inside its sandbox, so do NOT merge without a green CI run and a human read of the diff."
           } > /tmp/claude-pr-body.md
-          gh pr create             --head "${BRANCH}"             --base "${BASE_BRANCH}"             --title "$(git log -1 --format=%s "origin/${BRANCH}")"             --body-file /tmp/claude-pr-body.md || echo "PR creation failed; branch ${BRANCH} is pushed and can be opened by hand."
+          if gh pr create --head "${BRANCH}" --base "${BASE_BRANCH}" --title "$(git log -1 --format=%s "origin/${BRANCH}")" --body-file /tmp/claude-pr-body.md > /tmp/claude-pr.out 2>&1; then
+            cat /tmp/claude-pr.out
+            exit 0
+          fi
+          cat /tmp/claude-pr.out
+          echo "::error::Could not open a pull request for ${BRANCH}. The fix IS written and pushed to that branch — it is not lost."
+          if grep -qi "not permitted to create or approve pull requests" /tmp/claude-pr.out; then
+            echo "::error::Cause: this repository forbids Actions from opening pull requests. Fix it at Settings -> Actions -> General -> Workflow permissions -> tick 'Allow GitHub Actions to create and approve pull requests'."
+          fi
+          exit 1
