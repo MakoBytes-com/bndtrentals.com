@@ -1,27 +1,33 @@
-# Nightly backup of this project's own Supabase database.
+# Nightly backup of this project's own database and storage.
 #
 # This repo backs itself up. It does not back anything else up, and nothing
-# else backs it up. The secrets below open THIS project's database and no
-# other, so losing this repo's secrets exposes one database rather than the
-# fleet.
+# else backs it up. The secrets below open THIS project's Supabase project and
+# no other, so losing this repo's secrets exposes one project rather than the
+# whole fleet — which is exactly what the old central control panel did wrong:
+# it held one Management API token that unlocked all 22 databases.
 #
-# The backup lands as a release asset rather than a commit, so it never bloats
-# git history, and it lives on GitHub rather than inside the Supabase project
-# it protects — a project that is deleted or suspended cannot take its own
-# backups down with it.
+# Backups land as release assets rather than commits, so they never bloat git
+# history, and they live on GitHub rather than inside the Supabase project they
+# protect — a project that is deleted or suspended cannot take its own backups
+# down with it.
 #
-# Restore: download the asset, `tar -xzf`, replay supabase/migrations/ for the
-# schema, then load each table's rows from its .json.gz.
+# TWO ARTEFACTS PER PROJECT:
+#   backup-<date>    full database dump, one gzipped JSON per table
+#   storage-<date>   storage objects new or changed since the last run
+#   storage-index    the running index the increments are computed against
+#
+# RESTORE: replay supabase/migrations/ for the schema, load each table from
+# backup-<date>, then apply the storage baseline followed by each storage
+# increment in date order.
 
-name: Nightly database backup
+name: Nightly backup
 
 on:
   schedule:
-    # Staggered across the fleet so 22 projects do not all wake at once.
+    # Staggered across the fleet so projects do not all wake at once.
     - cron: "45 2 * * *"
   workflow_dispatch: {}
 
-# Least privilege: creating a release needs contents:write and nothing else.
 permissions:
   contents: write
 
@@ -32,7 +38,9 @@ concurrency:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Generous because a first storage baseline can be large — TopPaws is
+    # ~76,000 objects. Later runs are incremental and finish in a minute.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -50,17 +58,17 @@ jobs:
             echo "No backup can run without them. Failing rather than reporting a green tick."
             exit 1
           fi
+          echo "BACKUP_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
 
+      # ------------------------------------------------------------ database
       - name: Dump the database
         env:
           BACKUP_SUPABASE_URL: ${{ secrets.BACKUP_SUPABASE_URL }}
           BACKUP_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.BACKUP_SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_PROJECT_NAME: bndt-prod
-        run: |
-          echo "BACKUP_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
-          BACKUP_DATE="$(date -u +%F)" node .github/scripts/db-backup.mjs
+        run: node .github/scripts/db-backup.mjs
 
-      - name: Publish it as a release asset
+      - name: Publish the database backup
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -68,30 +76,66 @@ jobs:
           TAG="backup-${BACKUP_DATE}"
           FILE="bndt-prod-${BACKUP_DATE}.tar.gz"
           SIZE=$(du -h "$FILE" | cut -f1)
-          ROWS=$(node -e "const z=require('zlib'),{execSync}=require('child_process');
-            execSync('tar -xzf ${FILE} ./manifest.json');
-            console.log(require('./manifest.json').total_rows)")
-
-          # Re-running the same day replaces that day's asset rather than
-          # failing, so a manual re-run after a fixed problem just works.
+          tar -xzf "$FILE" ./manifest.json
+          ROWS=$(node -p "require('./manifest.json').total_rows")
+          TABLES=$(node -p "require('./manifest.json').tables.length")
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$FILE" --clobber
           else
             gh release create "$TAG" "$FILE" \
               --title "Database backup ${BACKUP_DATE}" \
-              --notes "Automated backup of bndt-prod taken ${BACKUP_DATE} (UTC). ${ROWS} rows, ${SIZE}.
-
-          Restore: download the asset, \`tar -xzf\`, replay \`supabase/migrations/\` for the schema, then load each table from its \`.json.gz\`. \`manifest.json\` lists every table and its row count."
+              --notes "Automated backup of bndt-prod taken ${BACKUP_DATE} (UTC). ${TABLES} tables, ${ROWS} rows, ${SIZE}."
           fi
 
-      - name: Keep the last 14, delete the rest
+      # ------------------------------------------------------------- storage
+      - name: Back up storage (incremental)
+        env:
+          BACKUP_SUPABASE_URL: ${{ secrets.BACKUP_SUPABASE_URL }}
+          BACKUP_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.BACKUP_SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PROJECT_NAME: bndt-prod
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/storage-backup.mjs
+
+      - name: Publish the storage increment
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Newest first, skip the 14 we keep, delete whatever is left. Tags go
-          # too, otherwise the repo accumulates refs pointing at nothing.
-          gh release list --limit 200 --json tagName \
+          shopt -s nullglob
+          PARTS=(bndt-prod-storage-${BACKUP_DATE}.tar.gz.part-*)
+          if [ ${#PARTS[@]} -gt 0 ]; then
+            TAG="storage-${BACKUP_DATE}"
+            COUNT=$(node -p "require('./storage-out/manifest.json').objects_in_this_increment")
+            TOTAL=$(node -p "require('./storage-out/manifest.json').objects_total")
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              gh release upload "$TAG" "${PARTS[@]}" --clobber
+            else
+              gh release create "$TAG" "${PARTS[@]}" \
+                --title "Storage backup ${BACKUP_DATE}" \
+                --notes "Objects new or changed on ${BACKUP_DATE} (UTC): ${COUNT} of ${TOTAL} total. Reassemble with \`cat *.part-* | tar -xzf -\`. Apply after the baseline and any earlier increments."
+            fi
+          else
+            echo "No storage changes today."
+          fi
+          # The index is what tomorrow's increment is computed against, so it
+          # is updated only after the increment above is safely published.
+          if [ -f index.json ]; then
+            gh release delete storage-index --yes 2>/dev/null || true
+            gh release create storage-index index.json \
+              --title "Storage index (rolling)" \
+              --notes "Running index of every stored object. Rewritten each night after the increment publishes. Not a backup on its own."
+          fi
+
+      # --------------------------------------------------------------- prune
+      - name: Keep the last 14 database backups
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Storage increments are NOT pruned: each one holds objects that
+          # appear in no other artefact, so deleting one loses those files
+          # permanently. Only the full database dumps roll over.
+          gh release list --limit 300 --json tagName \
             --jq '.[].tagName | select(startswith("backup-"))' \
             | sort -r | tail -n +15 | while read -r old; do
               echo "removing $old"
