@@ -1,0 +1,99 @@
+# Nightly backup of this project's own Supabase database.
+#
+# This repo backs itself up. It does not back anything else up, and nothing
+# else backs it up. The secrets below open THIS project's database and no
+# other, so losing this repo's secrets exposes one database rather than the
+# fleet.
+#
+# The backup lands as a release asset rather than a commit, so it never bloats
+# git history, and it lives on GitHub rather than inside the Supabase project
+# it protects — a project that is deleted or suspended cannot take its own
+# backups down with it.
+#
+# Restore: download the asset, `tar -xzf`, replay supabase/migrations/ for the
+# schema, then load each table's rows from its .json.gz.
+
+name: Nightly database backup
+
+on:
+  schedule:
+    # Staggered across the fleet so 22 projects do not all wake at once.
+    - cron: "45 2 * * *"
+  workflow_dispatch: {}
+
+# Least privilege: creating a release needs contents:write and nothing else.
+permissions:
+  contents: write
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check the secrets are present
+        env:
+          U: ${{ secrets.BACKUP_SUPABASE_URL }}
+          K: ${{ secrets.BACKUP_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$U" ] || [ -z "$K" ]; then
+            echo "::error::BACKUP_SUPABASE_URL / BACKUP_SUPABASE_SERVICE_ROLE_KEY are not set on this repository."
+            echo "No backup can run without them. Failing rather than reporting a green tick."
+            exit 1
+          fi
+
+      - name: Dump the database
+        env:
+          BACKUP_SUPABASE_URL: ${{ secrets.BACKUP_SUPABASE_URL }}
+          BACKUP_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.BACKUP_SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PROJECT_NAME: bndt-prod
+        run: |
+          echo "BACKUP_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
+          BACKUP_DATE="$(date -u +%F)" node .github/scripts/db-backup.mjs
+
+      - name: Publish it as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="backup-${BACKUP_DATE}"
+          FILE="bndt-prod-${BACKUP_DATE}.tar.gz"
+          SIZE=$(du -h "$FILE" | cut -f1)
+          ROWS=$(node -e "const z=require('zlib'),{execSync}=require('child_process');
+            execSync('tar -xzf ${FILE} ./manifest.json');
+            console.log(require('./manifest.json').total_rows)")
+
+          # Re-running the same day replaces that day's asset rather than
+          # failing, so a manual re-run after a fixed problem just works.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$FILE" --clobber
+          else
+            gh release create "$TAG" "$FILE" \
+              --title "Database backup ${BACKUP_DATE}" \
+              --notes "Automated backup of bndt-prod taken ${BACKUP_DATE} (UTC). ${ROWS} rows, ${SIZE}.
+
+          Restore: download the asset, \`tar -xzf\`, replay \`supabase/migrations/\` for the schema, then load each table from its \`.json.gz\`. \`manifest.json\` lists every table and its row count."
+          fi
+
+      - name: Keep the last 14, delete the rest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Newest first, skip the 14 we keep, delete whatever is left. Tags go
+          # too, otherwise the repo accumulates refs pointing at nothing.
+          gh release list --limit 200 --json tagName \
+            --jq '.[].tagName | select(startswith("backup-"))' \
+            | sort -r | tail -n +15 | while read -r old; do
+              echo "removing $old"
+              gh release delete "$old" --yes --cleanup-tag || true
+            done
