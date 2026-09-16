@@ -53,11 +53,11 @@ const PROCESSORS: { name: string; purpose: string; data: string; link?: string }
     data: "Same fields as Sentry — message, module, stack, route, user-agent, sanitized context. Resolved errors are auto-deleted after 90 days; raw page-view and event rows are auto-deleted after 180 days.",
   },
   {
-    name: "Resend (transactional email)",
+    name: "Cloudflare Email (transactional email)",
     purpose:
       "Delivers quote-confirmation and customer-service emails on our behalf.",
     data: "Recipient email address, message body, delivery status. Used only for the email you actually send or receive.",
-    link: "https://resend.com/legal/privacy-policy",
+    link: "https://www.cloudflare.com/privacypolicy/",
   },
   {
     name: "Cloudflare Turnstile (bot protection)",

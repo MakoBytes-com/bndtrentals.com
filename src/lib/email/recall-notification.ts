@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getResendClient, getResendFrom } from "./resend";
+import { mailEnabled, sendMail, getMailFrom } from "./mail";
 import { logError } from "@/lib/log";
 import { SITE } from "@/lib/site";
 
@@ -120,26 +120,25 @@ function renderText(p: RecallEmailPayload): string {
 export async function sendRecallNotification(
   payload: RecallEmailPayload,
 ): Promise<{ sent: boolean; reason?: string }> {
-  const resend = getResendClient();
-  if (!resend) return { sent: false, reason: "no_api_key" };
+  if (!mailEnabled()) return { sent: false, reason: "no_api_key" };
   try {
     const equipName = payload.equipmentLabel || payload.equipmentRef;
     const subject =
       payload.daysUntilDue < 0
         ? `Calibration overdue: ${equipName}`
         : `Calibration due ${payload.daysUntilDue === 0 ? "today" : `in ${payload.daysUntilDue} days`}: ${equipName}`;
-    const result = await resend.emails.send({
-      from: getResendFrom(),
+    const result = await sendMail({
+      from: getMailFrom(),
       to: payload.customerEmail,
       subject,
       html: renderHtml(payload),
       text: renderText(payload),
     });
-    if (result.error) {
+    if (!result.ok) {
       logError("recall-email", result.error, {
         context: { customerEmail: payload.customerEmail, equipmentRef: payload.equipmentRef },
       });
-      return { sent: false, reason: result.error.message ?? "resend_error" };
+      return { sent: false, reason: result.error ?? "mail_error" };
     }
     return { sent: true };
   } catch (err) {

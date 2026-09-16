@@ -241,8 +241,9 @@ export default async function CalibrationListPage({
       </div>
 
       <p className="mt-6 text-[12.5px] text-muted-soft">
-        Note: customer email reminders ship in Phase 4-B (Vercel Cron + Resend
-        templates). Until then this list is the source of truth, and recalls
+        Note: customer email reminders ship in Phase 4-B (Vercel Cron +
+        Cloudflare Email templates). Until then this list is the source of
+        truth, and recalls
         are surfaced on the dashboard.
       </p>
     </div>

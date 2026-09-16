@@ -9,8 +9,8 @@ import { sendQuoteNotification } from "@/lib/email/quote-notification";
 // Server action that backs the QuoteForm submission. Replaces the old mailto
 // flow. Validates with Zod, verifies Turnstile (fail-open until configured),
 // inserts into quote_leads via the service-role client (bypasses RLS), then
-// fires off a Resend notification email. Returns a structured result so the
-// client can render success / error toasts.
+// fires off a Cloudflare Email notification. Returns a structured result so
+// the client can render success / error toasts.
 
 const cartLineSchema = z.object({
   productSlug: z.string().min(1).max(200),

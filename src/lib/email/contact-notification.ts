@@ -1,10 +1,11 @@
 import "server-only";
 
 import {
-  getResendClient,
-  getResendFrom,
-  getResendNotificationTo,
-} from "./resend";
+  mailEnabled,
+  sendMail,
+  getMailFrom,
+  getMailNotificationTo,
+} from "./mail";
 import { logError } from "@/lib/log";
 
 export type ContactEmailPayload = {
@@ -67,21 +68,20 @@ function renderHtml(p: ContactEmailPayload): string {
 export async function sendContactNotification(
   payload: ContactEmailPayload,
 ): Promise<{ sent: boolean; reason?: string }> {
-  const resend = getResendClient();
-  if (!resend) return { sent: false, reason: "no_api_key" };
+  if (!mailEnabled()) return { sent: false, reason: "no_api_key" };
   try {
     const subject = `New contact message — ${payload.name || payload.email}`;
-    const result = await resend.emails.send({
-      from: getResendFrom(),
-      to: getResendNotificationTo(),
+    const result = await sendMail({
+      from: getMailFrom(),
+      to: getMailNotificationTo(),
       replyTo: payload.email,
       subject,
       html: renderHtml(payload),
       text: renderText(payload),
     });
-    if (result.error) {
+    if (!result.ok) {
       logError("contact-email", result.error);
-      return { sent: false, reason: result.error.message ?? "resend_error" };
+      return { sent: false, reason: result.error ?? "mail_error" };
     }
     return { sent: true };
   } catch (err) {
