@@ -117,12 +117,12 @@ export function SiteFooter() {
             <Link href="/terms" className="hover:text-white">Terms & Conditions</Link>
             <Link href="/privacy" className="hover:text-white">Privacy</Link>
             <a
-              href="https://makoai.studio"
+              href="https://makologics.com/areas/pasadena"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white"
             >
-              Built &amp; maintained by Makologics
+              Built &amp; maintained by Mako Logics, industrial IT support in Pasadena
             </a>
           </div>
         </div>
