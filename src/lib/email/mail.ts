@@ -23,6 +23,30 @@ export function getMailNotificationTo(): string {
   return process.env.MAIL_NOTIFICATION_TO ?? "information@bndtrentals.com";
 }
 
+/** Last-resort recipient for a non-production deployment, used only if
+ *  MAIL_NOTIFICATION_TO is not set on it. Never a client address. */
+const SAFE_NON_PRODUCTION_RECIPIENT = "rsailors@makologics.com";
+
+/** Only a real production deployment may send to a real address. Vercel sets
+ *  VERCEL_ENV to production | preview | development; it is undefined during
+ *  local `next dev`. Anything that is not explicitly "production" is treated
+ *  as unsafe, so a preview build or a laptop cannot email Burton or — via the
+ *  calibration recall job, which addresses customers directly — their
+ *  customers. Production behavior is unchanged. */
+function isProductionDeployment(): boolean {
+  return process.env.VERCEL_ENV === "production";
+}
+
+function redirectRecipient(to: string): {
+  to: string;
+  redirectedFrom?: string;
+} {
+  if (isProductionDeployment()) return { to };
+  const safe = process.env.MAIL_NOTIFICATION_TO ?? SAFE_NON_PRODUCTION_RECIPIENT;
+  if (safe === to) return { to };
+  return { to: safe, redirectedFrom: to };
+}
+
 export function mailEnabled(): boolean {
   return Boolean(
     process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_EMAIL_TOKEN,
@@ -69,6 +93,16 @@ export async function sendMail(input: {
     return { ok: false, error: "Email is not configured on this deployment." };
   }
 
+  const { to, redirectedFrom } = redirectRecipient(input.to);
+  if (redirectedFrom) {
+    console.warn(
+      `[mail] non-production deployment (VERCEL_ENV=${process.env.VERCEL_ENV ?? "unset"}): recipient redirected to ${to}. Original recipient NOT emailed.`,
+    );
+  }
+  const subject = redirectedFrom
+    ? `[${process.env.VERCEL_ENV ?? "local"} — would have gone to ${redirectedFrom}] ${input.subject}`
+    : input.subject;
+
   try {
     const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${account}/email/sending/send`,
@@ -80,9 +114,9 @@ export async function sendMail(input: {
         },
         body: JSON.stringify({
           from: input.from ?? getMailFrom(),
-          to: input.to,
+          to,
           ...(input.replyTo ? { reply_to: input.replyTo } : {}),
-          subject: input.subject,
+          subject,
           text: input.text,
           ...(input.html ? { html: input.html } : {}),
         }),
@@ -102,11 +136,11 @@ export async function sendMail(input: {
 
     const bounced = json.result?.permanent_bounces ?? [];
     const suppressed = json.result?.suppressed_recipients ?? [];
-    if (bounced.includes(input.to) || suppressed.includes(input.to)) {
-      const why = bounced.includes(input.to)
+    if (bounced.includes(to) || suppressed.includes(to)) {
+      const why = bounced.includes(to)
         ? "That address bounced permanently."
         : "That address is on the suppression list.";
-      console.error("[mail] not deliverable:", input.to, why);
+      console.error("[mail] not deliverable:", to, why);
       return { ok: false, error: why };
     }
 
