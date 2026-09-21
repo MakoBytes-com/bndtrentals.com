@@ -20,9 +20,9 @@ on:
   pull_request:
     branches: [main, master]
   schedule:
-    # Weekly full-history sweep, Monday 08:00 UTC. Catches anything that landed
+    # Weekly full-history sweep, Monday. Minute staggered per repo. Catches anything that landed
     # through a path the push trigger missed.
-    - cron: "0 8 * * 1"
+    - cron: "18 8 * * 1"
 
 permissions:
   contents: read
