@@ -37,7 +37,6 @@ type Initial = {
 
 export function ProductEditForm({
   initial,
-  categoryName: _categoryName,
   initialPhotos,
 }: {
   initial: Initial;

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/page-metadata";
-import Link from "next/link";
 import { Container } from "@/components/Container";
 import { PageHero } from "@/components/PageHero";
-import { SITE } from "@/lib/site";
 import { getPageContent, getEditMode } from "@/lib/cms";
 import { EditBar } from "@/components/cms/EditBar";
 

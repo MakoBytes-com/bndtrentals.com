@@ -23,6 +23,25 @@ import type {
 // time and we don't want to re-build connection pools per call.
 let _client: ReturnType<typeof createClient<Database>> | null = null;
 
+/**
+ * Whether the catalogue can be read at all. False in a build or preview that
+ * has no database settings - a preview is a preview - so pages that list the
+ * catalogue at build time build none up front and render each on first visit
+ * instead of failing the build.
+ */
+export function catalogConfigured(): boolean {
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
+/**
+ * No database here, and that is expected: a CI build or a preview. The
+ * readers then answer "nothing" instead of throwing. Never in production -
+ * a live site missing its settings must still fail loudly, not look empty.
+ */
+function catalogOffline(): boolean {
+  return !catalogConfigured() && process.env.VERCEL_ENV !== "production";
+}
+
 function getReadClient() {
   if (_client) return _client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -56,6 +75,7 @@ function publicizeCategory(c: CatalogCategory): PublicCategory {
 
 /** All published categories, ordered by sort_order ASC then name ASC. */
 export const getCategories = cache(async (): Promise<PublicCategory[]> => {
+  if (catalogOffline()) return [];
   const supa = getReadClient();
   const { data, error } = await supa
     .from("catalog_categories")
@@ -84,6 +104,7 @@ export const getCategoryBySlug = cache(
     products: CatalogProduct[];
     subcategories: SubcategoryBucket[];
   } | null> => {
+    if (catalogOffline()) return null;
     const supa = getReadClient();
 
     const { data: catRow, error: catErr } = await supa
@@ -159,6 +180,7 @@ export const getProduct = cache(
  */
 export const getProductImages = cache(
   async (productId: string): Promise<CatalogProductImage[]> => {
+    if (catalogOffline()) return [];
     const supa = getReadClient();
     const { data, error } = await supa
       .from("catalog_product_images")
@@ -182,6 +204,7 @@ export const getAllPublishedProducts = cache(
   async (): Promise<
     Array<{ category: PublicCategory; product: CatalogProduct }>
   > => {
+    if (catalogOffline()) return [];
     const cats = await getCategories();
     const supa = getReadClient();
     const { data: products, error } = await supa
@@ -205,6 +228,7 @@ export const getAllPublishedProducts = cache(
 
 /** Total count of published products across all categories. */
 export const getTotalProductCount = cache(async (): Promise<number> => {
+  if (catalogOffline()) return 0;
   const supa = getReadClient();
   const { count, error } = await supa
     .from("catalog_products")

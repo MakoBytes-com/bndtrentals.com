@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 
 // Placeholder shown for admin module pages that haven't been built yet.

@@ -327,13 +327,6 @@ export async function getAnalyticsSnapshot(): Promise<Snapshot> {
   const LOAD_METRICS = new Set<WebVitalMetric>(["lcp", "fcp", "ttfb"]);
 
   const vitalMetrics: WebVitalMetric[] = ["lcp", "inp", "cls", "fcp", "ttfb"];
-  const vitalThresholds: Record<WebVitalMetric, { good: number; poor: number }> = {
-    lcp: { good: 2500, poor: 4000 },
-    inp: { good: 200, poor: 500 },
-    cls: { good: 100, poor: 250 }, // ×1000 scale
-    fcp: { good: 1800, poor: 3000 },
-    ttfb: { good: 800, poor: 1800 },
-  };
   const vitalBuckets = new Map<WebVitalMetric, number[]>();
   const vitalBuckets7 = new Map<WebVitalMetric, number[]>();
   const sevenDaysAgoMs = Date.now() - 7 * 86_400_000;

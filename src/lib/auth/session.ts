@@ -35,18 +35,28 @@ export const sessionOptions: SessionOptions = {
   },
 };
 
-if (
-  process.env.NODE_ENV === "production" &&
-  (!process.env.IRON_SESSION_PASSWORD ||
-    process.env.IRON_SESSION_PASSWORD.length < 32)
-) {
-  throw new Error(
-    "[bndt auth] IRON_SESSION_PASSWORD must be set to a 32+ character random string in production.",
-  );
+// Checked when a session is actually used, not when this file is loaded:
+// `next build` loads every route to collect page data, and a load-time throw
+// made the build itself need the production secret (so CI could not build,
+// and the only build check was a preview carrying that secret). Every real
+// session still fails closed without a proper password.
+function assertSessionPassword() {
+  if (
+    process.env.NODE_ENV === "production" &&
+    (!process.env.IRON_SESSION_PASSWORD ||
+      process.env.IRON_SESSION_PASSWORD.length < 32)
+  ) {
+    throw new Error(
+      "[bndt auth] IRON_SESSION_PASSWORD must be set to a 32+ character random string in production.",
+    );
+  }
 }
 
 export async function getAdminSession() {
+  // Cookies first: that is what tells Next this page is per-request, so a
+  // build never tries to render an admin page ahead of time.
   const cookieStore = await cookies();
+  assertSessionPassword();
   return getIronSession<AdminSessionData>(cookieStore, sessionOptions);
 }
 

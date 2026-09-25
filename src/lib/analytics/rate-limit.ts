@@ -11,15 +11,15 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 // If volume ever grows enough that this matters, swap in Upstash Redis —
 // the call site stays the same.
 
-const supaPromise = (async () => getAdminSupabase())();
-
 export async function checkRate(
   key: string,
   windowMs: number,
   max: number,
 ): Promise<boolean> {
   try {
-    const supa = await supaPromise;
+    // Made on first use, not when the file loads: a build loads every route
+    // and has no database (and needs none). getAdminSupabase caches it.
+    const supa = getAdminSupabase();
     const { data, error } = await supa.rpc("check_and_record_rate", {
       p_bucket_key: key,
       p_window_ms: windowMs,

@@ -8,6 +8,9 @@ export function AdminLogoutButton({ compact = false }: { compact?: boolean }) {
   function handleLogout() {
     start(async () => {
       await fetch("/admin/logout", { method: "POST" });
+      // A full page load, not a client-side push: it drops every admin page
+      // the browser still holds now that the session cookie is gone.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/admin/login";
     });
   }
