@@ -33,6 +33,21 @@ const nextConfig: NextConfig = {
     // default for content imagery (product shots, gallery) where it matters.
     qualities: [45, 75],
   },
+  // www redirects to the bare domain here rather than in Vercel's domain
+  // settings: a domain-level redirect is answered before this config runs, so
+  // it went out with Vercel's short default HSTS (no includeSubDomains, no
+  // preload). Done here, headers() below applies to the 308 as well. The path
+  // and query string pass through untouched.
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.bndtrentals.com" }],
+        destination: "https://bndtrentals.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     // Admin-uploaded product images live in the Supabase Storage bucket
     // "catalog-images". Serving them under the existing /images/ path (via this
