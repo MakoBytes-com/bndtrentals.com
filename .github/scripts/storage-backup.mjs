@@ -41,6 +41,24 @@ const OUT = resolve("storage-out");
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
+// A dropped socket makes fetch THROW rather than return a 5xx, so listing
+// calls retry network errors, 429 and 5xx with backoff. Any other status is
+// returned for the caller to judge.
+async function fetchRetry(url, init, label) {
+  let lastErr;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+      if (res.ok || (res.status < 500 && res.status !== 429)) return res;
+      lastErr = new Error(`${label}: HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = new Error(`${label}: ${e.cause?.code || e.message || e}`);
+    }
+    if (attempt < 4) await new Promise((r) => setTimeout(r, 800 * attempt));
+  }
+  throw lastErr;
+}
+
 // --------------------------------------------------------------- list objects
 // storage.objects is not exposed through PostgREST, so the listing comes from
 // the storage API's own search endpoint, walked bucket by bucket, prefix by
@@ -50,11 +68,11 @@ async function listBucket(bucket) {
   const walk = async (prefix) => {
     let offset = 0;
     for (;;) {
-      const res = await fetch(`${URL_BASE}/storage/v1/object/list/${bucket}`, {
+      const res = await fetchRetry(`${URL_BASE}/storage/v1/object/list/${bucket}`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ prefix, limit: 1000, offset, sortBy: { column: "name", order: "asc" } }),
-      });
+      }, `list ${bucket}/${prefix}`);
       if (!res.ok) throw new Error(`list ${bucket}/${prefix}: HTTP ${res.status}`);
       const batch = await res.json();
       if (!batch.length) break;
@@ -77,7 +95,7 @@ async function listBucket(bucket) {
 }
 
 async function listBuckets() {
-  const res = await fetch(`${URL_BASE}/storage/v1/bucket`, { headers });
+  const res = await fetchRetry(`${URL_BASE}/storage/v1/bucket`, { headers }, "bucket list");
   if (!res.ok) throw new Error(`bucket list: HTTP ${res.status}`);
   return (await res.json()).map((b) => b.name ?? b.id);
 }

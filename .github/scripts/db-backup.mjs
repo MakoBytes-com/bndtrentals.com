@@ -48,11 +48,31 @@ mkdirSync(OUT, { recursive: true });
 
 const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
+// Every request goes through here. A dropped socket makes fetch THROW
+// ("fetch failed") rather than return a 5xx, so a retry that only inspects
+// res.status never sees it — that is how one network blip failed a whole
+// night's backup on 2026-09-26. Network errors, 429 and 5xx are retried with
+// backoff; any other status is returned for the caller to judge.
+async function fetchRetry(url, init, label) {
+  let lastErr;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+      if (res.ok || (res.status < 500 && res.status !== 429)) return res;
+      lastErr = new Error(`${label}: HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = new Error(`${label}: ${e.cause?.code || e.message || e}`);
+    }
+    if (attempt < 4) await new Promise((r) => setTimeout(r, 800 * attempt));
+  }
+  throw lastErr;
+}
+
 // PostgREST publishes an OpenAPI document at the API root listing every table
 // it exposes. Discovering tables this way means a new table is backed up the
 // night it is created, with nothing to remember to update.
 async function listTables() {
-  const res = await fetch(`${URL_BASE}/rest/v1/`, { headers });
+  const res = await fetchRetry(`${URL_BASE}/rest/v1/`, { headers }, "table discovery");
   if (!res.ok) throw new Error(`table discovery failed: HTTP ${res.status} ${await res.text()}`);
   const doc = await res.json();
   const defs = doc.definitions || doc.components?.schemas || {};
@@ -66,9 +86,11 @@ async function listTables() {
 const PAGE = 1000;
 
 async function countRows(table) {
-  const res = await fetch(`${URL_BASE}/rest/v1/${table}?select=*&limit=1`, {
-    headers: { ...headers, Prefer: "count=exact", Range: "0-0" },
-  });
+  const res = await fetchRetry(
+    `${URL_BASE}/rest/v1/${table}?select=*&limit=1`,
+    { headers: { ...headers, Prefer: "count=exact", Range: "0-0" } },
+    `count ${table}`,
+  );
   if (!res.ok) throw new Error(`count ${table}: HTTP ${res.status}`);
   return Number((res.headers.get("content-range") || "").split("/")[1] ?? NaN);
 }
@@ -76,22 +98,15 @@ async function countRows(table) {
 async function dumpTable(table, expected) {
   const rows = [];
   for (let from = 0; from < Math.max(expected, 1); from += PAGE) {
-    let ok = false;
-    for (let attempt = 1; attempt <= 4 && !ok; attempt++) {
-      const res = await fetch(`${URL_BASE}/rest/v1/${table}?select=*`, {
-        headers: { ...headers, Range: `${from}-${from + PAGE - 1}` },
-      });
-      if (res.ok) {
-        rows.push(...(await res.json()));
-        ok = true;
-        break;
-      }
-      if (res.status < 500 && res.status !== 429) {
-        throw new Error(`read ${table}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
-      }
-      await new Promise((r) => setTimeout(r, 800 * attempt));
+    const res = await fetchRetry(
+      `${URL_BASE}/rest/v1/${table}?select=*`,
+      { headers: { ...headers, Range: `${from}-${from + PAGE - 1}` } },
+      `read ${table} at rows ${from}+`,
+    );
+    if (!res.ok) {
+      throw new Error(`read ${table}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
     }
-    if (!ok) throw new Error(`read ${table}: gave up at rows ${from}+`);
+    rows.push(...(await res.json()));
     if (expected === 0) break;
   }
   // Row count is verified, not assumed. A short table is a failed backup.
