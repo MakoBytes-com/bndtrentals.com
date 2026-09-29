@@ -8,6 +8,19 @@ if (dsn) {
     dsn,
     environment: process.env.VERCEL_ENV ?? "development",
     tracesSampleRate: 0.1,
-    sendDefaultPii: false,
+    // Sentry v11 replaced `sendDefaultPii: false` with a per-category
+    // `dataCollection` object whose unset defaults collect everything. This
+    // reproduces the old restrictive default explicitly.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      genAI: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      stackFrameVariables: false,
+    },
   });
 }

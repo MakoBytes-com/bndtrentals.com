@@ -12,7 +12,21 @@ if (dsn) {
     tracesSampleRate: 0.1,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
-    sendDefaultPii: false,
+    // Sentry v11 replaced `sendDefaultPii: false` with a per-category
+    // `dataCollection` object whose unset defaults collect everything. This
+    // reproduces the old restrictive default explicitly, since the quote
+    // form carries names/emails/phones we never want leaving beforeSend.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      genAI: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      stackFrameVariables: false,
+    },
     beforeSend(event) {
       // Scrub free-text fields that frequently leak through error messages.
       if (event.request?.data && typeof event.request.data === "object") {
