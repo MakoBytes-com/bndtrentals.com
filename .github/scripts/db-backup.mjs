@@ -15,19 +15,34 @@
 // already owns. Schema is not dumped here because it is already versioned in
 // supabase/migrations/ — replay those, then load this data.
 //
-// WHAT IT PRODUCES: <project>-<date>.tar.gz containing one gzipped JSON file
+// WHAT IT PRODUCES: <project>-<date>.tar.gz containing one gzipped JSON array
 // per table plus a manifest.json recording each table's row count.
 //
-// HOW IT FAILS: loudly. A table that errors, or a dump whose total row count
-// is zero, exits non-zero so the workflow goes red and GitHub emails about it.
-// The arrangement this replaces reported "partial" every night for weeks while
-// 41% of MakoPulse's biggest table was missing, and nobody read it. A warning
-// nobody acts on is not a safeguard, so this does not warn — it fails.
+// HOW IT FAILS: loudly. A table that errors, a table whose dump is SHORT of the
+// rows it had, or a dump whose total row count is zero, exits non-zero so the
+// workflow goes red and GitHub emails about it. The arrangement this replaces
+// reported "partial" every night for weeks while 41% of MakoPulse's biggest
+// table was missing, and nobody read it. A warning nobody acts on is not a
+// safeguard, so this does not warn — it fails.
+//
+// LIVE TABLES (2026-09-29). The row check used to demand that the dump match a
+// count taken before it EXACTLY. On a table that is written to all night —
+// MakoPulse's `checks` (1.3M rows), Bulldog's `analytics_events` — rows land
+// while the dump is still paging, so the check failed 10 of 15 nights on
+// MakoPulse for growth, not loss. Now:
+//   * every table is read in a STABLE order (keyset on its primary key where
+//     it has a single-column one, otherwise ORDER BY its key/columns), so a row
+//     inserted mid-dump can never shift a page and make another row be skipped;
+//   * the table is counted before AND after the dump, and the dump must land
+//     between those two counts. Growth passes; anything short of the smaller
+//     count means rows went missing, and fails.
 
-import { writeFileSync, mkdirSync, rmSync } from "node:fs";
-import { gzipSync } from "node:zlib";
+import { mkdirSync, rmSync, createWriteStream } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { createGzip } from "node:zlib";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
+import { once } from "node:events";
 
 const URL_BASE = process.env.BACKUP_SUPABASE_URL;
 const KEY = process.env.BACKUP_SUPABASE_SERVICE_ROLE_KEY;
@@ -46,7 +61,14 @@ const OUT = resolve("backup-out");
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
-const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };
+// Sites that live in their own folder (schema) of a shared company project set
+// BACKUP_DB_SCHEMA, so the dump reads that folder and no other site's tables.
+const SCHEMA = process.env.BACKUP_DB_SCHEMA || "";
+const headers = {
+  apikey: KEY,
+  Authorization: `Bearer ${KEY}`,
+  ...(SCHEMA ? { "Accept-Profile": SCHEMA } : {}),
+};
 
 // Every request goes through here. A dropped socket makes fetch THROW
 // ("fetch failed") rather than return a 5xx, so a retry that only inspects
@@ -70,8 +92,10 @@ async function fetchRetry(url, init, label) {
 
 // PostgREST publishes an OpenAPI document at the API root listing every table
 // it exposes. Discovering tables this way means a new table is backed up the
-// night it is created, with nothing to remember to update.
-async function listTables() {
+// night it is created, with nothing to remember to update. The same document
+// marks primary-key columns (a "<pk/>" note in the column description), which
+// is what gives each table a stable order to page by.
+async function discover() {
   const res = await fetchRetry(`${URL_BASE}/rest/v1/`, { headers }, "table discovery");
   if (!res.ok) throw new Error(`table discovery failed: HTTP ${res.status} ${await res.text()}`);
   const doc = await res.json();
@@ -80,10 +104,24 @@ async function listTables() {
   const fromPaths = Object.keys(doc.paths || {})
     .filter((p) => p.startsWith("/") && p.length > 1 && !p.startsWith("/rpc/"))
     .map((p) => p.slice(1));
-  return [...new Set(fromPaths.length ? fromPaths : Object.keys(defs))].sort();
+  const tables = [...new Set(fromPaths.length ? fromPaths : Object.keys(defs))].sort();
+  return { tables, defs };
+}
+
+// json (not jsonb) has no ordering operator, so it can never be in an ORDER BY.
+const UNORDERABLE = new Set(["json"]);
+
+function orderPlan(def) {
+  const props = Object.entries(def?.properties || {});
+  const pk = props.filter(([, v]) => /<pk\/>/.test(v.description || "")).map(([k]) => k);
+  if (pk.length === 1) return { mode: "keyset", cols: pk };
+  if (pk.length > 1) return { mode: "ordered", cols: pk, dedupe: true };
+  const cols = props.filter(([, v]) => !UNORDERABLE.has(v.format)).map(([k]) => k);
+  return cols.length ? { mode: "ordered", cols, dedupe: false } : { mode: "unordered", cols: [] };
 }
 
 const PAGE = 1000;
+const col = (c) => encodeURIComponent(c);
 
 async function countRows(table) {
   const res = await fetchRetry(
@@ -92,32 +130,107 @@ async function countRows(table) {
     `count ${table}`,
   );
   if (!res.ok) throw new Error(`count ${table}: HTTP ${res.status}`);
-  return Number((res.headers.get("content-range") || "").split("/")[1] ?? NaN);
+  const n = Number((res.headers.get("content-range") || "").split("/")[1] ?? NaN);
+  if (!Number.isFinite(n)) throw new Error(`count ${table}: no exact count returned`);
+  return n;
 }
 
-async function dumpTable(table, expected) {
-  const rows = [];
-  for (let from = 0; from < Math.max(expected, 1); from += PAGE) {
-    const res = await fetchRetry(
-      `${URL_BASE}/rest/v1/${table}?select=*`,
-      { headers: { ...headers, Range: `${from}-${from + PAGE - 1}` } },
-      `read ${table} at rows ${from}+`,
-    );
-    if (!res.ok) {
-      throw new Error(`read ${table}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+async function readPage(table, query, label) {
+  const res = await fetchRetry(`${URL_BASE}/rest/v1/${table}?select=*${query}`, { headers }, label);
+  if (!res.ok) {
+    const err = new Error(`read ${table}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+// Rows are streamed straight into the gzip file one page at a time, so a
+// multi-million-row table never has to exist as one giant string in memory.
+// The file is still a single JSON array, exactly what restore expects.
+async function dumpTable(table, plan) {
+  const gz = createGzip();
+  const file = createWriteStream(resolve(OUT, `${table}.json.gz`));
+  gz.pipe(file);
+  const write = async (s) => {
+    if (!gz.write(s)) await once(gz, "drain");
+  };
+  await write("[");
+  let written = 0;
+  const emit = async (rows) => {
+    for (const r of rows) {
+      await write((written ? "," : "") + JSON.stringify(r));
+      written++;
     }
-    rows.push(...(await res.json()));
-    if (expected === 0) break;
+  };
+
+  if (plan.mode === "keyset") {
+    // WHERE pk > last ORDER BY pk LIMIT n. Inserts and deletes elsewhere in
+    // the table cannot move this cursor, so nothing is skipped or repeated.
+    // It stops on an EMPTY page, not a short one, so a server-side max-rows
+    // cap smaller than PAGE cannot end the dump early.
+    const [pk] = plan.cols;
+    let last;
+    for (;;) {
+      const after = last === undefined ? "" : `&${col(pk)}=gt.${encodeURIComponent(String(last))}`;
+      const rows = await readPage(
+        table,
+        `&order=${col(pk)}.asc&limit=${PAGE}${after}`,
+        `read ${table} after ${pk}=${last ?? "(start)"}`,
+      );
+      if (!rows.length) break;
+      const next = rows[rows.length - 1][pk];
+      if (next === null || next === undefined) throw new Error(`${table}: row with no ${pk}`);
+      if (typeof next === "number" && !Number.isSafeInteger(next) && Number.isInteger(next)) {
+        throw new Error(`${table}: ${pk} ${next} is beyond exact JSON precision; cannot page by it`);
+      }
+      if (last !== undefined && String(next) === String(last)) {
+        throw new Error(`${table}: keyset cursor did not advance past ${pk}=${last}`);
+      }
+      await emit(rows);
+      last = next;
+    }
+  } else {
+    // Offset paging, but always in a fixed ORDER BY so a mid-dump insert
+    // cannot reshuffle pages. A composite key is also de-duplicated, because
+    // an insert that sorts before the cursor pushes one row onto the next page
+    // twice. Advances by what actually came back and stops on an empty page,
+    // so a max-rows cap cannot silently skip rows.
+    let order = plan.cols.length ? `&order=${plan.cols.map((c) => `${col(c)}.asc`).join(",")}` : "";
+    const seen = plan.dedupe ? new Set() : null;
+    for (let from = 0; ; ) {
+      let rows;
+      try {
+        rows = await readPage(table, `${order}&limit=${PAGE}&offset=${from}`, `read ${table} at rows ${from}+`);
+      } catch (e) {
+        // A column type with no ordering (a custom type, say) — fall back to
+        // the old unordered read rather than lose the table. The before/after
+        // count check below still catches anything short.
+        if (order && from === 0 && e.status === 400) {
+          console.log(`  ${table}: cannot ORDER BY its columns (${e.message.slice(0, 120)}); reading unordered`);
+          order = "";
+          continue;
+        }
+        throw e;
+      }
+      if (!rows.length) break;
+      from += rows.length;
+      await emit(seen ? rows.filter((r) => {
+        const k = JSON.stringify(plan.cols.map((c) => r[c]));
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }) : rows);
+    }
   }
-  // Row count is verified, not assumed. A short table is a failed backup.
-  if (rows.length !== expected) {
-    throw new Error(`${table}: got ${rows.length} rows, expected ${expected}`);
-  }
-  writeFileSync(resolve(OUT, `${table}.json.gz`), gzipSync(JSON.stringify(rows)));
-  return rows.length;
+
+  await write("]");
+  gz.end();
+  await once(file, "finish");
+  return written;
 }
 
-const tables = await listTables();
+const { tables, defs } = await discover();
 if (!tables.length) {
   console.error("No tables discovered. Refusing to publish an empty backup.");
   process.exit(1);
@@ -130,11 +243,21 @@ let total = 0;
 
 for (const t of tables) {
   try {
-    const expected = await countRows(t);
-    const got = await dumpTable(t, expected);
+    const plan = orderPlan(defs[t]);
+    const before = await countRows(t);
+    const got = await dumpTable(t, plan);
+    const after = await countRows(t);
+    // The dump ran between two counts, so its size must land between them.
+    // Growth during the dump (after > before) is fine. Fewer rows than the
+    // smaller count means rows were missed — a failed backup.
+    const lo = Math.min(before, after);
+    const hi = Math.max(before, after);
+    if (got < lo || got > hi) {
+      throw new Error(`got ${got} rows, but the table held ${before} before and ${after} after the dump`);
+    }
     total += got;
-    manifest.tables.push({ table: t, rows: got });
-    console.log(`  ${t}: ${got}`);
+    manifest.tables.push({ table: t, rows: got, count_before: before, count_after: after, order: plan.mode });
+    console.log(`  ${t}: ${got}${after !== before ? ` (table went ${before} -> ${after} during the dump)` : ""}`);
   } catch (e) {
     failures.push({ table: t, error: String(e.message || e) });
     console.error(`  ${t}: FAILED — ${e.message || e}`);
@@ -159,4 +282,4 @@ if (total === 0) {
   console.error("\nEvery table came back empty. Treating as a failure, not a backup.");
   process.exit(1);
 }
-console.log("Every table matched its exact row count.");
+console.log("Every table's row count was verified against counts taken before and after its dump.");
